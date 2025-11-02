@@ -3,45 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Limpieza de Bases ICOMM</title>
+    <title>ARSA IA - Limpieza de Bases</title>
     <link rel="icon" href="/static/img/base-de-datos.ico" type="image/x-icon">
     <link rel="apple-touch-icon" href="/static/img/base-de-datos.png">
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
     <div class="container">
-        <h1>Limpieza de Bases ICOMM</h1>
-        <p>Seleccioná el archivo CSV que descargaste de la plataforma para elegir las columnas que necesitás.</p>
-        
-        <form id="upload-form" enctype="multipart/form-data">
+        <h1>ARSA IA - Limpieza de Bases</h1>
+        <p>Sube tu archivo .csv para limpiar y normalizar la base de datos. La IA se encargará de procesar y limpiar los datos por ti.</p>
+
+        <form id="upload-form" class="form-group">
             <div class="form-group">
-                <label for="csv-file" class="file-upload-label">
-                    <span>Hacé clic para seleccionar un archivo</span>
-                    <div id="file-name"></div>
-                </label>
-                <input type="file" id="csv-file" name="csv_file" accept=".csv" required>
-            </div>
+            <label for="csv-file" class="file-upload-label">
+                <img src="{{ url_for('static', filename='img/base-de-datos.png') }}" alt="Icono de base de datos" width="50">
+                <p><span>Arrastra y suelta tu archivo .csv o haz clic aquí</span></p>
+                <p id="file-name"></p>
+            </label>
+            <input type="file" id="csv-file" accept=".csv">
         </form>
 
+        <!-- Sección para mostrar y seleccionar columnas -->
         <div id="columns-section" class="hidden">
-            <h2>Columnas del archivo</h2>
-            <p>Seleccioná las columnas que querés mantener en el nuevo archivo.</p>
+            <h2>Columnas a limpiar</h2>
+            <button type="button" id="toggle-select-btn" class="btn btn-secondary">Seleccionar Todos</button>
             <div id="columns-list"></div>
-            <button id="process-btn" class="btn">Procesar Archivo</button>
+            <button type="button" id="process-btn" class="btn">Limpiar Base</button>
         </div>
 
+        <!-- Sección de progreso -->
         <div id="progress-section" class="hidden">
-            <h2>Procesando...</h2>
+            <h2>Limpiando base...</h2>
+            <p id="progress-text">Iniciando...</p>
             <div class="progress-bar">
-                <div class="progress" id="progress"></div>
+                <div id="progress" class="progress"></div>
             </div>
-            <p id="progress-text"></p>
         </div>
 
+        <!-- Sección de descarga -->
         <div id="download-section" class="hidden">
-            <h2>¡Proceso completado!</h2>
-            <p>Tu archivo está listo para descargar.</p>
-            <a href="#" id="download-link" class="btn" download>Descargar CSV Limpio</a>
+            <h2>¡Base Limpia!</h2>
+            <p>Tu base de datos ha sido limpiada y normalizada con éxito.</p>
+            <a href="#" id="download-link" class="btn">Descargar Base Limpia</a>
         </div>
     </div>
 

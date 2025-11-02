@@ -105,6 +105,28 @@ input[type="file"] {
     background-color: var(--primary-hover-color);
 }
 
+.btn:disabled {
+    background-color: var(--border-color);
+    cursor: not-allowed;
+}
+
+/* Spinner para el botón de procesar */
+.spinner {
+    display: inline-block;
+    width: 1.2em;
+    height: 1.2em;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s ease-in-out infinite;
+    margin-right: 0.5rem;
+    vertical-align: middle;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
 
 
 #columns-section h2, #progress-section h2, #download-section h2 {
@@ -115,8 +137,8 @@ input[type="file"] {
 }
 
 #columns-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    display: flex;
+    flex-direction: column;
     gap: 0.8rem;
     margin-top: 1rem;
     margin-bottom: 1.5rem;
@@ -147,6 +169,11 @@ input[type="file"] {
     overflow: hidden;
     text-overflow: ellipsis;
 }
+
+.icom-column {
+    color: #e74c3c; /* Rojo para destacar */
+}
+
 
 .column-item input[type="checkbox"]:disabled + label {
     color: var(--text-secondary-color);

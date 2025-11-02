@@ -45,13 +45,17 @@ def get_columns():
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
             file.save(filepath)
 
-            df_header = pd.read_csv(filepath, nrows=0, encoding='utf-8')
+            df_header = pd.read_csv(filepath, nrows=0, encoding='utf-8', sep=';')
             columns = df_header.columns.tolist()
-            
+
+            # Convertimos todas las columnas a minúsculas para la validación
             columns_lower = [c.lower() for c in columns]
+            
+            # Verificamos la presencia de 'email' y 'docnum' en minúsculas
             if 'email' not in columns_lower or 'docnum' not in columns_lower:
                 os.remove(filepath)
-                return jsonify({"error": "El archivo CSV debe contener las columnas 'email' y 'docNum'."}), 400
+                # El mensaje de error ahora es más claro
+                return jsonify({"error": "El archivo CSV debe contener las columnas 'email' y 'docnum' (los nombres pueden estar en mayúsculas o minúsculas)."}), 400
 
             return jsonify({"columns": columns, "filepath": filepath})
 
@@ -76,7 +80,7 @@ def process_csv_task(task_id, filepath, selected_columns, output_path):
         chunk_size = 10000
         first_chunk = True
 
-        for chunk in pd.read_csv(filepath, usecols=selected_columns, chunksize=chunk_size, encoding='utf-8'):
+        for chunk in pd.read_csv(filepath, usecols=selected_columns, chunksize=chunk_size, encoding='utf-8', sep=';'):
             
             # Normalizamos los nombres de las columnas a minúsculas
             chunk.columns = [col.lower() for col in chunk.columns]
