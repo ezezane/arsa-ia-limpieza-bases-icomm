@@ -54,3 +54,46 @@ Desarrollar una herramienta web interna para limpiar y filtrar archivos CSV expo
         *   Durante el procesamiento del archivo, todos los nombres de las columnas se convierten a minúsculas. Esto asegura que el sistema pueda encontrar y procesar los campos `email` y `docNum` de manera consistente.
     *   **Frontend (`script.js`):**
         *   La lógica que deshabilita la selección de los campos obligatorios (`email` y `docNum`) en la lista de columnas también se ha hecho *case-insensitive*.
+
+#### 2025-11-02 (Continuación)
+
+*   **Funcionalidad "Seleccionar/Deseleccionar Todos":**
+    *   Se implementó un botón que permite a los usuarios seleccionar o deseleccionar todas las columnas con un solo clic, mejorando la usabilidad.
+    *   El texto del botón cambia dinámicamente entre "Seleccionar Todos" y "Deseleccionar Todo" según el estado de los checkboxes.
+*   **Estado Inicial de las Columnas:**
+    *   Se modificó el comportamiento por defecto para que todas las columnas opcionales aparezcan deseleccionadas al cargar un archivo. Los campos obligatorios (`email` y `docNum`) permanecen seleccionados y bloqueados.
+*   **Exclusión en "Seleccionar Todos":**
+    *   Se ajustó la funcionalidad del botón "Seleccionar Todos" para que ignore y no seleccione las columnas específicas de la plataforma ICOMM (aquellas que comienzan con `icommkt`).
+
+---
+
+# Mejoras Propuestas (Roadmap)
+
+A continuación se detallan las mejoras planificadas para futuras versiones de la herramienta, con el objetivo de enriquecer la experiencia de usuario, ampliar la funcionalidad y mejorar la calidad técnica del proyecto.
+
+### Versión 1.1: Mejoras de Experiencia de Usuario (UX)
+
+*   **Feedback Visual en Carga de Archivos:**
+    *   Implementar un cambio de estilo en la zona de "arrastrar y soltar" cuando un archivo se arrastra sobre ella para dar una confirmación visual.
+*   **Previsualización de Datos:**
+    *   Mostrar una tabla con las primeras filas del archivo procesado (antes de la descarga) para que el usuario pueda verificar que la selección y limpieza de columnas es la correcta.
+*   **Búsqueda y Filtro de Columnas:**
+    *   Añadir una barra de búsqueda en la sección de selección de columnas para filtrar rápidamente la lista, especialmente útil para archivos con una gran cantidad de campos.
+
+### Versión 1.2: Mejoras de Funcionalidad
+
+*   **Guardar "Presets" de Columnas:**
+    *   Desarrollar una función para guardar y cargar selecciones de columnas predefinidas, agilizando el trabajo para tareas repetitivas.
+*   **Soporte para Archivos Excel:**
+    *   Ampliar la compatibilidad de la herramienta para poder procesar archivos en formato `.xlsx` y `.xls`, además de `.csv`.
+*   **Reordenamiento de Columnas:**
+    *   Permitir al usuario reordenar las columnas mediante "arrastrar y soltar" (drag and drop) para definir la estructura del archivo de salida.
+
+### Versión 2.0: Mejoras Técnicas y de Mantenimiento
+
+*   **Modularización del Código Frontend:**
+    *   Refactorizar el archivo `script.js` en módulos más pequeños y específicos (UI, API, etc.) para facilitar el mantenimiento y la escalabilidad.
+*   **Gestión de Errores Avanzada:**
+    *   Mejorar el manejo de errores en el backend para proveer mensajes más específicos y útiles al usuario final.
+*   **Contenerización con Docker:**
+    *   Crear un `Dockerfile` y la configuración necesaria para empaquetar la aplicación, simplificando el despliegue y asegurando la consistencia del entorno.
