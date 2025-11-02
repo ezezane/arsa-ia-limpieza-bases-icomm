@@ -20,6 +20,11 @@ app.config['DOWNLOAD_FOLDER'] = DOWNLOAD_FOLDER
 # --- Task Management ---
 tasks = {}
 
+def clean_email(email):
+    if isinstance(email, str) and '>' in email:
+        return email.split('>', 1)[-1]
+    return email
+
 @app.route('/')
 def index():
     """Página principal"""
@@ -72,11 +77,6 @@ def process_csv_task(task_id, filepath, selected_columns, output_path):
         total_rows = sum(1 for row in open(filepath, 'r', encoding='utf-8')) - 1 # -1 por la cabecera
         rows_processed = 0
 
-        def clean_email(email):
-            if isinstance(email, str) and '>' in email:
-                return email.split('>', 1)[-1]
-            return email
-
         chunk_size = 10000
         first_chunk = True
 
@@ -106,6 +106,35 @@ def process_csv_task(task_id, filepath, selected_columns, output_path):
     except Exception as e:
         tasks[task_id]['status'] = 'error'
         tasks[task_id]['error'] = str(e)
+
+@app.route('/api/preview-file', methods=['POST'])
+def preview_file():
+    data = request.get_json()
+    filepath = data.get('filepath')
+    selected_columns = data.get('columns')
+
+    if not filepath or not os.path.exists(filepath):
+        return jsonify({"error": "El archivo original no se encontró."}), 400
+
+    try:
+        df_preview = pd.read_csv(filepath, usecols=selected_columns, nrows=10, encoding='utf-8', sep=';')
+
+        # Find the email column name (case-insensitive)
+        email_col = None
+        for col in df_preview.columns:
+            if col.lower() == 'email':
+                email_col = col
+                break
+        
+        if email_col:
+            df_preview[email_col] = df_preview[email_col].apply(clean_email)
+
+        preview_data = df_preview.to_dict(orient='records')
+
+        return jsonify({"preview": preview_data, "columns": selected_columns})
+
+    except Exception as e:
+        return jsonify({"error": f"Error al generar la previsualización: {e}"}), 500
 
 @app.route('/api/process-file', methods=['POST'])
 def process_file_request():

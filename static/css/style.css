@@ -74,6 +74,12 @@ input[type="file"] {
     background-color: rgba(58, 123, 253, 0.05);
 }
 
+.file-upload-label.dragover {
+    border-color: var(--primary-color);
+    border-style: solid;
+    background-color: rgba(58, 123, 253, 0.1);
+}
+
 .file-upload-label span {
     font-weight: 500;
     color: var(--primary-color);
@@ -105,6 +111,43 @@ input[type="file"] {
     background-color: var(--primary-hover-color);
 }
 
+.btn.btn-secondary {
+    background-color: transparent;
+    color: var(--text-secondary-color);
+    border: 1px solid var(--border-color);
+}
+
+.btn.btn-secondary:hover {
+    background-color: var(--border-color);
+    color: var(--text-color);
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    background-color: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-color);
+    font-size: 1rem;
+    box-sizing: border-box;
+}
+
+.form-control::placeholder {
+    color: var(--text-secondary-color);
+}
+
+.form-control:focus {
+    border-color: var(--primary-color);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(58, 123, 253, 0.25);
+}
+
+#search-columns {
+    margin-top: 1rem;
+}
+
 .btn:disabled {
     background-color: var(--border-color);
     cursor: not-allowed;
@@ -129,7 +172,7 @@ input[type="file"] {
 
 
 
-#columns-section h2, #progress-section h2, #download-section h2 {
+#columns-section h2, #progress-section h2, #download-section h2, #preview-section h2 {
     text-align: center;
     color: var(--text-color);
     font-weight: 600;
@@ -201,6 +244,34 @@ input[type="file"] {
 
 #download-section a {
     text-align: center;
+}
+
+#preview-table-container {
+    margin-top: 1.5rem;
+    margin-bottom: 1.5rem;
+    overflow-x: auto;
+    background-color: var(--background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+#preview-table-container table {
+    width: 100%;
+    border-collapse: collapse;
+    white-space: nowrap;
+}
+
+#preview-table-container th,
+#preview-table-container td {
+    padding: 0.8rem 1rem;
+    border: 1px solid var(--border-color);
+    text-align: left;
+}
+
+#preview-table-container th {
+    background-color: var(--surface-color);
+    font-weight: 600;
 }
 
 /* Utility Classes */

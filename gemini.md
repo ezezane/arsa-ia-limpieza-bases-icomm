@@ -64,6 +64,17 @@ Desarrollar una herramienta web interna para limpiar y filtrar archivos CSV expo
     *   Se modificó el comportamiento por defecto para que todas las columnas opcionales aparezcan deseleccionadas al cargar un archivo. Los campos obligatorios (`email` y `docNum`) permanecen seleccionados y bloqueados.
 *   **Exclusión en "Seleccionar Todos":**
     *   Se ajustó la funcionalidad del botón "Seleccionar Todos" para que ignore y no seleccione las columnas específicas de la plataforma ICOMM (aquellas que comienzan con `icommkt`).
+*   **Feedback Visual en Carga de Archivos:**
+    *   Se implementó un efecto visual (`dragover`) en la zona de carga de archivos para indicar cuando un archivo está siendo arrastrado sobre ella.
+    *   Se añadió lógica JavaScript para manejar los eventos de arrastrar y soltar, permitiendo la carga de archivos mediante esta interacción.
+*   **Funcionalidad de Previsualización de Datos:**
+    *   Se introdujo un paso intermedio de previsualización antes de la limpieza final. El botón "Limpiar Base" fue reemplazado por "Previsualizar".
+    *   Se añadió una nueva sección en la interfaz de usuario para mostrar una tabla con las primeras filas de los datos procesados, permitiendo al usuario verificar la selección de columnas y la limpieza de emails.
+    *   Se creó un nuevo endpoint `/api/preview-file` en el backend para generar esta previsualización, asegurando que los datos se muestren con el formato y las columnas correctas.
+    *   Se añadió un botón "Volver a Seleccionar" para regresar a la selección de columnas desde la previsualización.
+*   **Búsqueda y Filtro de Columnas:**
+    *   Se añadió un campo de búsqueda en la sección de selección de columnas, permitiendo a los usuarios filtrar la lista de columnas por nombre.
+    *   La funcionalidad de búsqueda es *case-insensitive* y oculta/muestra las columnas dinámicamente.
 
 ---
 
