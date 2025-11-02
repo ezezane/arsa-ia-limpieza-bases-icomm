@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Limpieza de Bases ICOMM</title>
+    <link rel="icon" href="/static/img/base-de-datos.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" href="/static/img/base-de-datos.png">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Limpieza de Bases ICOMM</h1>
+        <p>Seleccioná el archivo CSV que descargaste de la plataforma para elegir las columnas que necesitás.</p>
+        
+        <form id="upload-form" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="csv-file" class="file-upload-label">
+                    <span>Hacé clic para seleccionar un archivo</span>
+                    <div id="file-name"></div>
+                </label>
+                <input type="file" id="csv-file" name="csv_file" accept=".csv" required>
+            </div>
+        </form>
+
+        <div id="columns-section" class="hidden">
+            <h2>Columnas del archivo</h2>
+            <p>Seleccioná las columnas que querés mantener en el nuevo archivo.</p>
+            <div id="columns-list"></div>
+            <button id="process-btn" class="btn">Procesar Archivo</button>
+        </div>
+
+        <div id="progress-section" class="hidden">
+            <h2>Procesando...</h2>
+            <div class="progress-bar">
+                <div class="progress" id="progress"></div>
+            </div>
+            <p id="progress-text"></p>
+        </div>
+
+        <div id="download-section" class="hidden">
+            <h2>¡Proceso completado!</h2>
+            <p>Tu archivo está listo para descargar.</p>
+            <a href="#" id="download-link" class="btn" download>Descargar CSV Limpio</a>
+        </div>
+    </div>
+
+    <script src="/static/js/script.js"></script>
+
+    <!-- Modal para notificaciones -->
+    <div id="notification-modal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="close-btn">&times;</button>
+            <div id="modal-message"></div>
+        </div>
+    </div>
+</body>
+</html>
