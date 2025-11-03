@@ -61,8 +61,14 @@ A continuación se detallan las mejoras planificadas para futuras versiones de l
     *   Se ha implementado una lógica para reordenar las columnas en el archivo de salida, asegurando que `email` y `docNum` siempre aparezcan como las dos primeras columnas, seguidas por el resto de las columnas seleccionadas.
 *   **Previsualización de Datos**:
     *   Se ha añadido una nueva funcionalidad de previsualización que permite al usuario ver las primeras 10 filas de los datos procesados antes de iniciar la limpieza completa. Esto se ha logrado a través de un nuevo endpoint (`/api/preview-file`) y la lógica correspondiente en el backend.
-*   **Procesamiento en Segundo Plano (Asíncrono)**:
-    *   El procesamiento de archivos CSV ahora se ejecuta como una tarea en segundo plano. Esto mejora la experiencia del usuario al no tener que esperar en la página a que finalice el proceso. Se ha implementado un sistema de tareas con identificadores únicos (`task_id`) y un endpoint para consultar el progreso (`/api/progress/<task_id>`).
+
+#### 2025-11-03 (Continuación)
+
+*   **Corrección de Error de Codificación de Archivos**:
+    *   Se solucionó un error crítico que impedía procesar archivos que no estuvieran en codificación `UTF-8`.
+    *   **Backend (`app.py`):
+        *   Se modificaron las funciones `get_columns`, `preview_file` y `process_csv_task` para manejar de forma robusta la codificación de los archivos.
+        *   El sistema ahora intenta leer los archivos CSV con `UTF-8` y, si detecta un `UnicodeDecodeError`, reintenta automáticamente con la codificación `latin-1`. Esto asegura la compatibilidad con una mayor variedad de archivos, especialmente aquellos que contienen caracteres como la 'Ñ'.
 
 
 ---

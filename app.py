@@ -50,7 +50,13 @@ def get_columns():
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
             file.save(filepath)
 
-            df_header = pd.read_csv(filepath, nrows=0, encoding='utf-8', sep=';')
+            try:
+                # Intenta leer con UTF-8
+                df_header = pd.read_csv(filepath, nrows=0, encoding='utf-8', sep=';')
+            except UnicodeDecodeError:
+                # Si falla, intenta con latin-1
+                df_header = pd.read_csv(filepath, nrows=0, encoding='latin-1', sep=';')
+
             columns = df_header.columns.tolist()
 
             # Convertimos todas las columnas a minúsculas para la validación
@@ -65,6 +71,9 @@ def get_columns():
             return jsonify({"columns": columns, "filepath": filepath})
 
         except Exception as e:
+            # Si ocurre cualquier otro error, lo capturamos
+            if os.path.exists(filepath):
+                os.remove(filepath)
             return jsonify({"error": f"Error al procesar el archivo: {e}"}), 500
     else:
         return jsonify({"error": "Formato de archivo no válido. Por favor, subí un archivo .csv"}), 400
@@ -73,14 +82,22 @@ def get_columns():
 def process_csv_task(task_id, filepath, selected_columns, output_path):
     """La función que se ejecuta en segundo plano para procesar el CSV."""
     try:
-        # Estimamos el total de filas para la barra de progreso
-        total_rows = sum(1 for row in open(filepath, 'r', encoding='utf-8')) - 1 # -1 por la cabecera
-        rows_processed = 0
+        # --- Detección de codificación y conteo de filas ---
+        encoding = 'utf-8'
+        try:
+            # Intenta contar las filas con UTF-8
+            total_rows = sum(1 for _ in open(filepath, 'r', encoding='utf-8')) - 1
+        except UnicodeDecodeError:
+            # Si falla, cambia a latin-1 y vuelve a contar
+            encoding = 'latin-1'
+            total_rows = sum(1 for _ in open(filepath, 'r', encoding='latin-1')) - 1
 
+        rows_processed = 0
         chunk_size = 10000
         first_chunk = True
 
-        for chunk in pd.read_csv(filepath, usecols=selected_columns, chunksize=chunk_size, encoding='utf-8', sep=';'):
+        # --- Procesamiento por chunks con la codificación detectada ---
+        for chunk in pd.read_csv(filepath, usecols=selected_columns, chunksize=chunk_size, encoding=encoding, sep=';'):
             
             # Normalizamos los nombres de las columnas a minúsculas
             chunk.columns = [col.lower() for col in chunk.columns]
@@ -147,7 +164,12 @@ def preview_file():
         return jsonify({"error": "El archivo original no se encontró."}), 400
 
     try:
-        df_preview = pd.read_csv(filepath, usecols=selected_columns, nrows=10, encoding='utf-8', sep=';')
+        try:
+            # Intenta leer con UTF-8
+            df_preview = pd.read_csv(filepath, usecols=selected_columns, nrows=10, encoding='utf-8', sep=';')
+        except UnicodeDecodeError:
+            # Si falla, intenta con latin-1
+            df_preview = pd.read_csv(filepath, usecols=selected_columns, nrows=10, encoding='latin-1', sep=';')
 
         # Reindex the DataFrame with the new column order as provided by the frontend
         df_preview = df_preview[selected_columns]
