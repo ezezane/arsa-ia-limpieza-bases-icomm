@@ -88,6 +88,36 @@ def process_csv_task(task_id, filepath, selected_columns, output_path):
             # Ahora podemos acceder a 'email' de forma segura
             if 'email' in chunk.columns:
                 chunk['email'] = chunk['email'].apply(clean_email)
+
+            # Reorder columns to ensure 'email' and 'docnum' are always first and second
+            ordered_cols = []
+            email_col_name = None
+            docnum_col_name = None
+
+            # Find the actual case of 'email' and 'docnum' in the chunk
+            for col in chunk.columns:
+                if col.lower() == 'email':
+                    email_col_name = col
+                elif col.lower() == 'docnum':
+                    docnum_col_name = col
+            
+            # Add email and docnum to the ordered list if they exist
+            if email_col_name:
+                ordered_cols.append(email_col_name)
+            if docnum_col_name:
+                ordered_cols.append(docnum_col_name)
+
+            # Add other columns from selected_columns, maintaining their order
+            # and ensuring no duplicates with email/docnum
+            for col in selected_columns:
+                if col.lower() != 'email' and col.lower() != 'docnum':
+                    # Find the actual case of the column in the chunk
+                    actual_col_name = next((c for c in chunk.columns if c.lower() == col.lower()), None)
+                    if actual_col_name and actual_col_name not in ordered_cols:
+                        ordered_cols.append(actual_col_name)
+
+            # Reindex the DataFrame with the desired column order
+            chunk = chunk[ordered_cols]
             
             if first_chunk:
                 chunk.to_csv(output_path, index=False, mode='w')
@@ -119,17 +149,28 @@ def preview_file():
     try:
         df_preview = pd.read_csv(filepath, usecols=selected_columns, nrows=10, encoding='utf-8', sep=';')
 
-        # Find the email column name (case-insensitive)
-        email_col = None
-        for col in df_preview.columns:
+        # Reindex the DataFrame with the new column order as provided by the frontend
+        df_preview = df_preview[selected_columns]
+
+        email_col_name = None
+        for col in selected_columns:
             if col.lower() == 'email':
-                email_col = col
+                email_col_name = col
                 break
+
+        # Apply clean_email function if email column exists
+        if email_col_name:
+            df_preview[email_col_name] = df_preview[email_col_name].apply(clean_email)
+
+
+
+        # Ensure all NaN values are converted to empty strings for valid JSON serialization and front-end compatibility
+        df_preview = df_preview.fillna('')
         
-        if email_col:
-            df_preview[email_col] = df_preview[email_col].apply(clean_email)
+
 
         preview_data = df_preview.to_dict(orient='records')
+
 
         return jsonify({"preview": preview_data, "columns": selected_columns})
 

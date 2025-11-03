@@ -85,6 +85,15 @@ input[type="file"] {
     color: var(--primary-color);
 }
 
+.file-upload-label.loading span {
+    color: var(--text-secondary-color);
+}
+
+.file-upload-label.loading .spinner {
+    display: inline-block;
+    margin-right: 0.5rem;
+}
+
 #file-name {
     margin-top: 1rem;
     font-style: italic;
@@ -105,6 +114,7 @@ input[type="file"] {
     margin-top: 1rem;
     width: 100%;
     transition: background-color 0.3s;
+    box-sizing: border-box;
 }
 
 .btn:hover {
@@ -217,6 +227,22 @@ input[type="file"] {
     color: #e74c3c; /* Rojo para destacar */
 }
 
+.column-item.fixed-column {
+    background-color: #282828; /* Darker background for fixed columns */
+    cursor: not-allowed;
+    opacity: 0.8;
+}
+
+.column-item.dragging {
+    opacity: 0.5;
+    border: 1px dashed var(--primary-color);
+}
+
+.column-item.drag-over {
+    border: 2px solid var(--primary-color);
+    background-color: rgba(58, 123, 253, 0.1);
+}
+
 
 .column-item input[type="checkbox"]:disabled + label {
     color: var(--text-secondary-color);
@@ -286,42 +312,55 @@ input[type="file"] {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.7);
-    display: none; /* Oculto por defecto */
+    background-color: rgba(0, 0, 0, 0.5); /* Slightly darker overlay */
+    display: flex; /* Always flex to center content */
     justify-content: center;
-    align-items: center;
+    align-items: flex-start; /* Align to top */
     z-index: 1000;
+    opacity: 0; /* Start hidden for animation */
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
 }
 
 .modal-overlay.active {
-    display: flex; /* Se muestra al añadir la clase active */
+    opacity: 1;
+    visibility: visible;
 }
 
 .modal-content {
     background-color: var(--surface-color);
-    padding: 2rem;
+    padding: 1.5rem 2rem;
     border-radius: 8px;
     border: 1px solid var(--border-color);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-    max-width: 400px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    max-width: 450px;
     width: 90%;
     position: relative;
+    margin-top: 5vh; /* Distance from top */
+    transform: translateY(-20px); /* Start slightly above for animation */
+    transition: transform 0.3s ease;
+}
+
+.modal-overlay.active .modal-content {
+    transform: translateY(0); /* Slide into place */
 }
 
 .close-btn {
     position: absolute;
-    top: 1rem;
-    right: 1rem;
+    top: 0.75rem;
+    right: 0.75rem;
     background: none;
     border: none;
-    font-size: 1.5rem;
+    font-size: 1.2rem;
     color: var(--text-secondary-color);
     cursor: pointer;
+    line-height: 1;
 }
 
 #modal-message {
     text-align: center;
-    font-size: 1.1rem;
+    font-size: 1rem;
+    margin-bottom: 0;
 }
 
 /* Tipos de Modal */
@@ -331,4 +370,8 @@ input[type="file"] {
 
 .modal-content.success {
     border-left: 5px solid #2ecc71; /* Verde para éxito */
+}
+
+.modal-content.info {
+    border-left: 5px solid var(--primary-color); /* Azul para información */
 }

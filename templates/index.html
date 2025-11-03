@@ -17,7 +17,7 @@
             <div class="form-group">
             <label for="csv-file" class="file-upload-label">
                 <img src="{{ url_for('static', filename='img/base-de-datos.png') }}" alt="Icono de base de datos" width="50">
-                <p><span>Arrastra y suelta tu archivo .csv o haz clic aquí</span></p>
+                <p id="upload-instruction-text">Arrastra y suelta tu archivo .csv o haz clic aquí</p>
                 <p id="file-name"></p>
             </label>
             <input type="file" id="csv-file" accept=".csv">
@@ -30,6 +30,15 @@
             <button type="button" id="toggle-select-btn" class="btn btn-secondary">Seleccionar Todos</button>
             <div id="columns-list"></div>
             <button type="button" id="preview-btn" class="btn">Previsualizar</button>
+        </div>
+
+        <!-- Sección para reordenar columnas (nueva) -->
+        <div id="reorder-section" class="hidden">
+            <h2>Reordenar Columnas Seleccionadas</h2>
+            <p>Arrastra y suelta las columnas para establecer el orden deseado en el archivo final.</p>
+            <div id="reorder-columns-list" class="columns-list-reorder"></div>
+            <button type="button" id="confirm-reorder-btn" class="btn">Confirmar Orden y Previsualizar</button>
+            <button type="button" id="back-to-selection-btn" class="btn btn-secondary">Volver a Selección</button>
         </div>
 
         <!-- Sección de Previsualización -->

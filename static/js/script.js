@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const csvFileInput = document.getElementById('csv-file');
     const fileUploadLabel = document.querySelector('.file-upload-label');
     const fileNameDisplay = document.getElementById('file-name');
+    const uploadInstructionText = document.getElementById('upload-instruction-text');
     const columnsSection = document.getElementById('columns-section');
     const columnsList = document.getElementById('columns-list');
     const previewBtn = document.getElementById('preview-btn');
@@ -13,157 +14,106 @@ document.addEventListener('DOMContentLoaded', () => {
     const backToColumnsBtn = document.getElementById('back-to-columns-btn');
     const searchColumnsInput = document.getElementById('search-columns');
 
+    const reorderSection = document.getElementById('reorder-section');
+    const reorderColumnsList = document.getElementById('reorder-columns-list');
+    const confirmReorderBtn = document.getElementById('confirm-reorder-btn');
+    const backToSelectionBtn = document.getElementById('back-to-selection-btn');
+
     // Modal
     const modal = document.getElementById('notification-modal');
     const modalMessage = document.getElementById('modal-message');
     const modalContent = modal.querySelector('.modal-content');
     const closeModalBtn = modal.querySelector('.close-btn');
     
-    let originalFilepath = '';
+    let modalTimeout;
 
-    function showModal(message, type = 'error') {
+    function showModal(message, type = 'info', autoHide = true) {
+        clearTimeout(modalTimeout); // Clear any existing auto-hide timeout
         modalMessage.textContent = message;
-        modalContent.classList.remove('error', 'success');
-        modalContent.classList.add(type);
-        modal.classList.add('active');
+        modalContent.className = 'modal-content'; // Reset classes
+        modalContent.classList.add(type); // Add type class for styling (e.g., 'error', 'success')
+        modal.classList.add('active'); // Show the modal
+
+        if (autoHide && (type === 'success' || type === 'info')) {
+            modalTimeout = setTimeout(() => {
+                modal.classList.remove('active');
+            }, 3000); // Hide after 3 seconds
+        }
     }
 
-    function closeModal() {
+    closeModalBtn.addEventListener('click', () => {
         modal.classList.remove('active');
-    }
+        clearTimeout(modalTimeout);
+    });
 
-    closeModalBtn.addEventListener('click', closeModal);
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            closeModal();
+    window.addEventListener('click', (event) => {
+        if (event.target === modal) {
+            modal.classList.remove('active');
+            clearTimeout(modalTimeout);
         }
-    });
-
-    // Cerrar modal con la tecla Escape
-    window.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && modal.classList.contains('active')) {
-            closeModal();
-        }
-    });
-
-    // --- Drag & Drop Feedback ---
-    const preventDefaults = e => {
-        e.preventDefault();
-        e.stopPropagation();
-    };
-
-    // Prevent browser from opening file if dropped outside the dropzone
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        document.body.addEventListener(eventName, preventDefaults);
-    });
-
-    // Add visual feedback to the dropzone
-    fileUploadLabel.addEventListener('dragenter', () => {
-        fileUploadLabel.classList.add('dragover');
     });
     
-    // We must prevent the default behavior on dragover to allow a drop.
-    fileUploadLabel.addEventListener('dragover', preventDefaults);
+    let originalFilepath = '';
+    let draggedItem = null;
+    let currentOrderedColumns = []; // To store the final ordered columns for processing
 
-    fileUploadLabel.addEventListener('dragleave', () => {
-        fileUploadLabel.classList.remove('dragover');
-    });
+    function populateReorderList(columns) {
+        reorderColumnsList.innerHTML = ''; // Clear previous list
 
-    fileUploadLabel.addEventListener('drop', (e) => {
-        fileUploadLabel.classList.remove('dragover');
-        csvFileInput.files = e.dataTransfer.files;
-        csvFileInput.dispatchEvent(new Event('change'));
-    });
-
-    csvFileInput.addEventListener('change', async () => {
-        const file = csvFileInput.files[0];
-
-        if (file) {
-            fileNameDisplay.textContent = file.name;
-        } else {
-            fileNameDisplay.textContent = '';
-            columnsSection.classList.add('hidden');
-            columnsList.innerHTML = '';
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append('csv_file', file);
-
-        // Reset UI for new file
-        columnsSection.classList.add('hidden');
-        columnsList.innerHTML = '';
-
-        try {
-            const response = await fetch('/api/get-columns', {
-                method: 'POST',
-                body: formData
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || 'Error del servidor');
-            }
-
-            originalFilepath = data.filepath;
-            displayColumns(data.columns);
-            columnsSection.classList.remove('hidden');
-
-        } catch (error) {
-            showModal(error.message, 'error');
-            uploadForm.reset();
-            fileNameDisplay.textContent = '';
-        }
-    });
-
-    function displayColumns(columns) {
-        // Limpiar la lista antes de agregar nuevas columnas
-        columnsList.innerHTML = '';
-
-        const emailCols = columns.filter(c => c.toLowerCase() === 'email');
-        const docnumCols = columns.filter(c => c.toLowerCase() === 'docnum');
-        const icomCols = columns.filter(c => c.toLowerCase().startsWith('icommkt')).sort();
-        const otherCols = columns.filter(c => 
-            c.toLowerCase() !== 'email' && 
-            c.toLowerCase() !== 'docnum' && 
-            !c.toLowerCase().startsWith('icommkt')
-        ).sort();
-
-        const sortedColumns = [...emailCols, ...docnumCols, ...otherCols, ...icomCols];
-
-        sortedColumns.forEach(column => {
+        columns.forEach(column => {
             const item = document.createElement('div');
             item.classList.add('column-item');
-
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.id = column;
-            checkbox.name = 'columns';
-            checkbox.value = column;
-            checkbox.checked = false; // Por defecto, ninguna seleccionada
+            item.id = `reorder-item-${column}`; // Unique ID for reorder list
 
             const label = document.createElement('label');
-            label.htmlFor = column;
             label.textContent = column;
 
-            // Comportamiento especial para columnas iComMkt
-            if (column.toLowerCase().startsWith('icommkt')) {
-                checkbox.checked = false;
-                label.classList.add('icom-column');
-            }
-
-            // Campos obligatorios no se pueden deseleccionar (case-insensitive)
+            // Mandatory columns are not draggable in reorder list either
             if (column.toLowerCase() === 'email' || column.toLowerCase() === 'docnum') {
-                checkbox.disabled = true;
-                checkbox.checked = true; // Asegurarse de que siempre esté chequeado
+                item.classList.add('fixed-column');
+                item.draggable = false;
+            } else {
+                item.draggable = true;
             }
 
-            item.appendChild(checkbox);
             item.appendChild(label);
-            columnsList.appendChild(item);
+            reorderColumnsList.appendChild(item);
         });
     }
+
+    // Drag and Drop for column reordering (now applies to both lists)
+    function setupDragAndDrop(listElement) {
+        listElement.addEventListener('dragstart', (e) => {
+            if (e.target.classList.contains('column-item') && e.target.draggable) {
+                draggedItem = e.target;
+                setTimeout(() => {
+                    e.target.classList.add('dragging');
+                }, 0);
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', e.target.id);
+            }
+        });
+
+        listElement.addEventListener('dragover', (e) => {
+            e.preventDefault(); // Allow drop
+            const target = e.target.closest('.column-item');
+            if (target && target !== draggedItem && !target.classList.contains('fixed-column')) {
+                const rect = target.getBoundingClientRect();
+                const next = (e.clientY - rect.top) / (rect.bottom - rect.top) > 0.5;
+                listElement.insertBefore(draggedItem, next && target.nextSibling || target);
+            }
+        });
+
+        listElement.addEventListener('dragend', (e) => {
+            if (draggedItem) {
+                draggedItem.classList.remove('dragging');
+                draggedItem = null;
+            }
+        });
+    }
+
+    setupDragAndDrop(columnsList); // Apply to initial selection list
+    setupDragAndDrop(reorderColumnsList); // Apply to reorder list
 
     toggleSelectBtn.addEventListener('click', () => {
         let checkboxes = columnsList.querySelectorAll('input[type="checkbox"]:not(:disabled)');
@@ -194,6 +144,115 @@ document.addEventListener('DOMContentLoaded', () => {
                 item.style.display = 'none'; // Hide the item
             }
         });
+    });
+
+    csvFileInput.addEventListener('change', async (event) => {
+        const file = event.target.files[0];
+        if (!file) {
+            fileNameDisplay.textContent = '';
+            uploadInstructionText.innerHTML = 'Arrastra y suelta tu archivo .csv o haz clic aquí';
+            columnsSection.classList.add('hidden');
+            return;
+        }
+
+        fileNameDisplay.textContent = file.name;
+        uploadInstructionText.innerHTML = '<span class="spinner"></span> Cargando...';
+        fileUploadLabel.classList.add('loading');
+
+        const formData = new FormData();
+        formData.append('csv_file', file);
+
+        try {
+            const response = await fetch('/api/get-columns', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Error del servidor al cargar el archivo.');
+            }
+
+            originalFilepath = data.filepath;
+            columnsList.innerHTML = ''; // Clear previous columns
+
+            const allColumns = data.columns;
+            const mandatoryColumns = [];
+            const icommktColumns = [];
+            const otherColumns = [];
+
+            // Separate columns into categories
+            allColumns.forEach(column => {
+                if (column.toLowerCase() === 'email' || column.toLowerCase() === 'docnum') {
+                    mandatoryColumns.push(column);
+                } else if (column.toLowerCase().startsWith('icommkt_')) {
+                    icommktColumns.push(column);
+                } else {
+                    otherColumns.push(column);
+                }
+            });
+
+            // Sort otherColumns and icommktColumns alphabetically
+            otherColumns.sort((a, b) => a.localeCompare(b));
+            icommktColumns.sort((a, b) => a.localeCompare(b));
+
+            // Ensure 'email' comes before 'docnum' if both are present
+            mandatoryColumns.sort((a, b) => {
+                if (a.toLowerCase() === 'email') return -1;
+                if (b.toLowerCase() === 'email') return 1;
+                return 0;
+            });
+
+            // Combine and display columns
+            [...mandatoryColumns, ...otherColumns, ...icommktColumns].forEach(column => {
+                const item = document.createElement('div');
+                item.classList.add('column-item');
+                item.draggable = true; // Make columns draggable by default
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = column;
+                checkbox.value = column;
+
+                const label = document.createElement('label');
+                label.htmlFor = column;
+                label.textContent = column;
+
+                // Apply rules based on category
+                if (column.toLowerCase() === 'email' || column.toLowerCase() === 'docnum') {
+                    checkbox.checked = true;
+                    checkbox.disabled = true;
+                    item.classList.add('mandatory-column');
+                    item.draggable = false; // Mandatory columns are not draggable
+                } else if (column.toLowerCase().startsWith('icommkt_')) {
+                    item.classList.add('icom-column'); // Add class for red styling
+                    checkbox.checked = false; // Unchecked by default
+                }
+
+                item.appendChild(checkbox);
+                item.appendChild(label);
+                columnsList.appendChild(item);
+            });
+
+            columnsSection.classList.remove('hidden');
+            showModal('Archivo cargado y columnas obtenidas con éxito.', 'success');
+
+        } catch (error) {
+            showModal(error.message, 'error');
+            columnsSection.classList.add('hidden'); // Hide columns section on error
+            fileNameDisplay.textContent = '';
+            uploadInstructionText.innerHTML = 'Arrastra y suelta tu archivo .csv o haz clic aquí';
+        } finally {
+            fileUploadLabel.classList.remove('loading');
+            // Always restore the original instruction text in the main label area
+            uploadInstructionText.innerHTML = 'Arrastra y suelta tu archivo .csv o haz clic aquí';
+            // The fileNameDisplay already holds the file.name if a file was selected.
+            // If there was an error or no file, fileNameDisplay should be cleared.
+            if (!originalFilepath || !file) {
+                fileNameDisplay.textContent = '';
+            }
+        }
     });
 
     function displayPreview(previewData, columns) {
@@ -234,7 +293,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     previewBtn.addEventListener('click', async () => {
-        const selectedColumns = Array.from(columnsList.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+        const selectedColumns = Array.from(columnsList.children)
+                                .filter(item => item.querySelector('input[type="checkbox"]').checked)
+                                .map(item => item.querySelector('input[type="checkbox"]').value);
 
         if (selectedColumns.length === 0) {
             showModal('Por favor, seleccioná al menos una columna.', 'error');
@@ -267,9 +328,22 @@ document.addEventListener('DOMContentLoaded', () => {
             // Generate and display the preview table
             displayPreview(data.preview, data.columns);
 
-            // Show preview section and hide columns section
-            columnsSection.classList.add('hidden');
-            previewSection.classList.remove('hidden');
+            // Check if there are any optional columns selected
+            const mandatoryColumnsLower = ['email', 'docnum'];
+            const optionalSelectedColumns = selectedColumns.filter(col => !mandatoryColumnsLower.includes(col.toLowerCase()));
+
+            if (optionalSelectedColumns.length > 0) {
+                // If optional columns are selected, go to reorder section
+                columnsSection.classList.add('hidden');
+                reorderSection.classList.remove('hidden');
+                populateReorderList(selectedColumns); // Pass all selected columns to reorder
+            } else {
+                // If only mandatory or no optional columns, proceed directly to preview
+                currentOrderedColumns = selectedColumns; // Store the order
+                // Show preview section and hide columns section
+                columnsSection.classList.add('hidden');
+                previewSection.classList.remove('hidden');
+            }
 
         } catch (error) {
             showModal(error.message, 'error');
@@ -286,11 +360,54 @@ document.addEventListener('DOMContentLoaded', () => {
         previewTableContainer.innerHTML = ''; // Clear the table
     });
 
-    processBtn.addEventListener('click', async () => {
-        const selectedColumns = Array.from(columnsList.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+    confirmReorderBtn.addEventListener('click', async () => {
+        const finalOrderedColumns = Array.from(reorderColumnsList.children).map(item => item.querySelector('label').textContent);
 
-        if (selectedColumns.length === 0) {
-            showModal('Por favor, seleccioná al menos una columna.', 'error');
+        // --- Spinner Logic ---
+        confirmReorderBtn.disabled = true;
+        const originalBtnText = confirmReorderBtn.innerHTML;
+        confirmReorderBtn.innerHTML = '<span class="spinner"></span> Cargando...';
+
+        try {
+            const response = await fetch('/api/preview-file', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    filepath: originalFilepath,
+                    columns: finalOrderedColumns // Use the final ordered columns
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Error del servidor al generar la previsualización.');
+            }
+
+            currentOrderedColumns = finalOrderedColumns; // Store the order
+            displayPreview(data.preview, data.columns); // data.columns will be the final ordered columns
+            reorderSection.classList.add('hidden');
+            previewSection.classList.remove('hidden');
+
+        } catch (error) {
+            showModal(error.message, 'error');
+        } finally {
+            confirmReorderBtn.disabled = false;
+            confirmReorderBtn.innerHTML = originalBtnText;
+        }
+    });
+
+    backToSelectionBtn.addEventListener('click', () => {
+        reorderSection.classList.add('hidden');
+        columnsSection.classList.remove('hidden');
+    });
+
+    processBtn.addEventListener('click', async () => {
+        // Use the globally stored ordered columns
+        if (currentOrderedColumns.length === 0) {
+            showModal('No hay columnas seleccionadas para procesar.', 'error');
             return;
         }
 
@@ -321,7 +438,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 body: JSON.stringify({ 
                     filepath: originalFilepath,
-                    columns: selectedColumns
+                    columns: currentOrderedColumns // Use the globally stored ordered columns
                 })
             });
 
