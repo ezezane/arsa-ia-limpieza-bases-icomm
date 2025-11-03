@@ -70,6 +70,19 @@ A continuación se detallan las mejoras planificadas para futuras versiones de l
         *   Se modificaron las funciones `get_columns`, `preview_file` y `process_csv_task` para manejar de forma robusta la codificación de los archivos.
         *   El sistema ahora intenta leer los archivos CSV con `UTF-8` y, si detecta un `UnicodeDecodeError`, reintenta automáticamente con la codificación `latin-1`. Esto asegura la compatibilidad con una mayor variedad de archivos, especialmente aquellos que contienen caracteres como la 'Ñ'.
 
+#### 2025-11-03 (Continuación)
+
+*   **Refactorización del Frontend (`script.js`):**
+    *   Se ha refactorizado completamente el archivo `static/js/script.js` para mejorar la mantenibilidad y escalabilidad, cumpliendo con el punto 1 de la versión 2.0 del roadmap.
+    *   El código se ha organizado en un objeto principal `App` que encapsula diferentes módulos lógicos:
+        *   `state`: Para gestionar el estado de la aplicación.
+        *   `elements`: Para centralizar la selección de elementos del DOM.
+        *   `ui`: Para todas las manipulaciones de la interfaz de usuario.
+        *   `api`: Para la comunicación con el backend.
+        *   `events` y `handlers`: Para la gestión de eventos.
+        *   `dragDrop`: Para la funcionalidad de arrastrar y soltar.
+    *   Este cambio no introduce nueva funcionalidad visible para el usuario pero establece una base de código mucho más limpia y robusta para futuras mejoras.
+
 
 ---
 
