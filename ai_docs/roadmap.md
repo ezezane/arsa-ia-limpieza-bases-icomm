@@ -12,8 +12,6 @@ A continuación se detallan las mejoras planificadas para futuras versiones de l
 
 ### Versión 2.0: Mejoras Técnicas y de Mantenimiento
 
-*   **Modularización del Código Frontend:**
-    *   Refactorizar el archivo `script.js` en módulos más pequeños y específicos (UI, API, etc.) para facilitar el mantenimiento y la escalabilidad.
 *   **Gestión de Errores Avanzada:**
     *   Mejorar el manejo de errores en el backend para proveer mensajes más específicos y útiles al usuario final.
 *   **Contenerización con Docker:**
@@ -82,6 +80,14 @@ A continuación se detallan las mejoras planificadas para futuras versiones de l
         *   `events` y `handlers`: Para la gestión de eventos.
         *   `dragDrop`: Para la funcionalidad de arrastrar y soltar.
     *   Este cambio no introduce nueva funcionalidad visible para el usuario pero establece una base de código mucho más limpia y robusta para futuras mejoras.
+
+#### 2025-11-03 (Continuación)
+
+*   **Gestión de Errores Avanzada en el Backend (`app.py`)**:
+    *   Se ha implementado el manejo de errores avanzado en el backend, abordando ahora sí el primer punto de la V2.0 del roadmap.
+    *   El sistema ahora captura excepciones específicas como `FileNotFoundError`, `KeyError`, `MemoryError`, y errores de parseo de pandas.
+    *   En lugar de errores genéricos, se muestran mensajes claros al usuario para guiarlo en la solución del problema (ej: "El archivo es demasiado grande", "Hubo un problema al leer el archivo CSV").
+    *   Esto incrementa la robustez y mejora significativamente la experiencia de usuario.
 
 
 ---

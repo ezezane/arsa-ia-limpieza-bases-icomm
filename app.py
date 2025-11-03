@@ -38,16 +38,16 @@ def get_columns():
     Recibe un archivo CSV, extrae las cabeceras y las devuelve.
     """
     if 'csv_file' not in request.files:
-        return jsonify({"error": "No se encontró el archivo"}), 400
+        return jsonify({"error": "No se ha subido ningún archivo. Por favor, seleccioná un archivo para continuar."}), 400
 
     file = request.files['csv_file']
 
     if file.filename == '':
-        return jsonify({"error": "No se seleccionó ningún archivo"}), 400
+        return jsonify({"error": "No has seleccionado ningún archivo. Por favor, hacé clic en 'Seleccionar archivo' para elegir uno."}), 400
 
     if file and file.filename.endswith('.csv'):
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
         try:
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
             file.save(filepath)
 
             try:
@@ -56,27 +56,26 @@ def get_columns():
             except UnicodeDecodeError:
                 # Si falla, intenta con latin-1
                 df_header = pd.read_csv(filepath, nrows=0, encoding='latin-1', sep=';')
+            except (pd.errors.ParserError, pd.errors.EmptyDataError):
+                os.remove(filepath)
+                return jsonify({"error": "Hubo un problema al leer el archivo CSV. Por favor, verificá que el archivo esté bien formado, que no esté vacío y que el separador de columnas sea un punto y coma (;)."}), 400
 
             columns = df_header.columns.tolist()
 
-            # Convertimos todas las columnas a minúsculas para la validación
             columns_lower = [c.lower() for c in columns]
             
-            # Verificamos la presencia de 'email' y 'docnum' en minúsculas
             if 'email' not in columns_lower or 'docnum' not in columns_lower:
                 os.remove(filepath)
-                # El mensaje de error ahora es más claro
-                return jsonify({"error": "El archivo CSV debe contener las columnas 'email' y 'docnum' (los nombres pueden estar en mayúsculas o minúsculas)."}), 400
+                return jsonify({"error": "El archivo CSV debe contener las columnas 'email' y 'docnum'. No se distingue entre mayúsculas y minúsculas."}), 400
 
             return jsonify({"columns": columns, "filepath": filepath})
 
         except Exception as e:
-            # Si ocurre cualquier otro error, lo capturamos
             if os.path.exists(filepath):
                 os.remove(filepath)
-            return jsonify({"error": f"Error al procesar el archivo: {e}"}), 500
+            return jsonify({"error": "Ocurrió un error inesperado al procesar el archivo. Por favor, intentá de nuevo. Si el problema persiste, contactá a soporte."}), 500
     else:
-        return jsonify({"error": "Formato de archivo no válido. Por favor, subí un archivo .csv"}), 400
+        return jsonify({"error": "El formato del archivo no es válido. La herramienta solo acepta archivos .csv."}), 400
 
 
 def process_csv_task(task_id, filepath, selected_columns, output_path):
@@ -150,9 +149,18 @@ def process_csv_task(task_id, filepath, selected_columns, output_path):
         tasks[task_id]['status'] = 'complete'
         tasks[task_id]['result'] = download_url
 
+    except FileNotFoundError:
+        tasks[task_id]['status'] = 'error'
+        tasks[task_id]['error'] = "El archivo original fue eliminado o movido durante el procesamiento. Por favor, iniciá el proceso de nuevo."
+    except KeyError:
+        tasks[task_id]['status'] = 'error'
+        tasks[task_id]['error'] = "Una de las columnas seleccionadas no se encontró en el archivo. Esto puede ocurrir si el CSV tiene una estructura inconsistente. Por favor, revisá el archivo."
+    except MemoryError:
+        tasks[task_id]['status'] = 'error'
+        tasks[task_id]['error'] = "El archivo es demasiado grande para ser procesado en este momento. Por favor, intentá con un archivo más pequeño o dividilo en varias partes."
     except Exception as e:
         tasks[task_id]['status'] = 'error'
-        tasks[task_id]['error'] = str(e)
+        tasks[task_id]['error'] = "Ocurrió un error inesperado durante la limpieza del archivo. Por favor, intentá de nuevo."
 
 @app.route('/api/preview-file', methods=['POST'])
 def preview_file():
@@ -161,7 +169,7 @@ def preview_file():
     selected_columns = data.get('columns')
 
     if not filepath or not os.path.exists(filepath):
-        return jsonify({"error": "El archivo original no se encontró."}), 400
+        return jsonify({"error": "No se pudo encontrar el archivo original para la previsualización. Por favor, intentá subir el archivo de nuevo."}), 400
 
     try:
         try:
@@ -196,8 +204,10 @@ def preview_file():
 
         return jsonify({"preview": preview_data, "columns": selected_columns})
 
+    except KeyError:
+        return jsonify({"error": "Una de las columnas seleccionadas no se encontró en el archivo. Esto puede ocurrir si el CSV tiene una estructura inconsistente. Por favor, revisá el archivo."}), 400
     except Exception as e:
-        return jsonify({"error": f"Error al generar la previsualización: {e}"}), 500
+        return jsonify({"error": "Ocurrió un error al generar la previsualización. Verificá que las columnas seleccionadas sean correctas e intentá de nuevo."}), 500
 
 @app.route('/api/process-file', methods=['POST'])
 def process_file_request():
@@ -206,7 +216,7 @@ def process_file_request():
     selected_columns = data.get('columns')
 
     if not filepath or not os.path.exists(filepath):
-        return jsonify({"error": "El archivo original no se encontró."}), 400
+        return jsonify({"error": "No se pudo encontrar el archivo original para la previsualización. Por favor, intentá subir el archivo de nuevo."}), 400
 
     task_id = str(uuid.uuid4())
     original_filename = os.path.basename(filepath)
