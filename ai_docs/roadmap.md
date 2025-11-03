@@ -12,8 +12,6 @@ A continuación se detallan las mejoras planificadas para futuras versiones de l
 
 ### Versión 2.0: Mejoras Técnicas y de Mantenimiento
 
-*   **Gestión de Errores Avanzada:**
-    *   Mejorar el manejo de errores en el backend para proveer mensajes más específicos y útiles al usuario final.
 *   **Contenerización con Docker:**
     *   Crear un `Dockerfile` y la configuración necesaria para empaquetar la aplicación, simplificando el despliegue y asegurando la consistencia del entorno.
 
@@ -88,6 +86,14 @@ A continuación se detallan las mejoras planificadas para futuras versiones de l
     *   El sistema ahora captura excepciones específicas como `FileNotFoundError`, `KeyError`, `MemoryError`, y errores de parseo de pandas.
     *   En lugar de errores genéricos, se muestran mensajes claros al usuario para guiarlo en la solución del problema (ej: "El archivo es demasiado grande", "Hubo un problema al leer el archivo CSV").
     *   Esto incrementa la robustez y mejora significativamente la experiencia de usuario.
+
+#### 2025-11-03 (Continuación)
+
+*   **Refactorización Integral del Backend (`app.py`)**:
+    *   Se ha realizado una refactorización profunda del archivo `app.py` para mejorar la mantenibilidad, escalabilidad y legibilidad del código.
+    *   **Centralización de la lógica de lectura de archivos:** Se creó la función `get_csv_encoding` para evitar la duplicación de código en la detección de la codificación de archivos.
+    *   **Separación de la lógica de negocio:** Se extrajo la lógica de negocio de las rutas de la API a funciones auxiliares (`validate_and_get_columns`, `generate_preview_data`, `reorder_chunk_columns`), haciendo el código más modular y fácil de probar.
+    *   **Gestión de la configuración:** Se centralizaron las variables de configuración (separador de CSV, tamaño de chunk, etc.) en el objeto `app.config` de Flask para una gestión más sencilla.
 
 
 ---
