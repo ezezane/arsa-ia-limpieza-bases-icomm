@@ -95,6 +95,19 @@ A continuación se detallan las mejoras planificadas para futuras versiones de l
     *   **Separación de la lógica de negocio:** Se extrajo la lógica de negocio de las rutas de la API a funciones auxiliares (`validate_and_get_columns`, `generate_preview_data`, `reorder_chunk_columns`), haciendo el código más modular y fácil de probar.
     *   **Gestión de la configuración:** Se centralizaron las variables de configuración (separador de CSV, tamaño de chunk, etc.) en el objeto `app.config` de Flask para una gestión más sencilla.
 
+#### 2025-11-03 (Continuación)
+
+*   **Feature: Generación Automática de `docnum`**:
+    *   Se ha implementado una nueva funcionalidad para procesar archivos CSV que no contienen la columna `docnum`.
+    *   **Backend (`app.py`):**
+        *   El sistema ahora detecta automáticamente la ausencia de la columna `docnum` y activa un modo de generación.
+        *   Se extrae el `docnum` del contenido que se encuentra entre los caracteres `<` y `>` en la columna `email`.
+        *   Se creó una lógica de procesamiento (`process_dataframe_logic`) para manejar de forma centralizada la limpieza de datos en ambos casos (con y sin `docnum` inicial).
+    *   **Frontend (`script.js`):**
+        *   La interfaz ahora muestra una notificación al usuario cuando se activa el modo de generación de `docnum`.
+        *   Se ajustó la comunicación con el backend para gestionar el nuevo flujo de trabajo.
+    *   Esta funcionalidad aumenta la flexibilidad de la herramienta, permitiendo procesar bases de datos de "actividad" que antes eran incompatibles.
+
 
 ---
 

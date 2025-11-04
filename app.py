@@ -39,49 +39,79 @@ def get_csv_encoding(filepath):
 
 def validate_and_get_columns(filepath):
     """
-    Valida un archivo CSV y devuelve sus columnas.
-    Verifica codificación, estructura y columnas obligatorias.
-    Devuelve: (columnas, error_mensaje)
+    Valida un archivo CSV y devuelve sus columnas y estado.
+    Devuelve: (columnas, error_mensaje, needs_docnum_generation)
     """
     try:
         encoding = get_csv_encoding(filepath)
         df_header = pd.read_csv(filepath, nrows=0, encoding=encoding, sep=app.config['CSV_SEPARATOR'])
     except (pd.errors.ParserError, pd.errors.EmptyDataError):
-        return None, f"Hubo un problema al leer el archivo CSV. Verificá que esté bien formado, no esté vacío y que el separador de columnas sea un '{app.config['CSV_SEPARATOR']}'."
+        return None, f"Hubo un problema al leer el archivo CSV. Verificá que esté bien formado, no esté vacío y que el separador de columnas sea un '{app.config['CSV_SEPARATOR']}'.", False
 
     columns = df_header.columns.tolist()
     columns_lower = [c.lower() for c in columns]
 
-    missing_cols = [col for col in app.config['REQUIRED_COLUMNS'] if col not in columns_lower]
-    if missing_cols:
-        return None, f"El archivo CSV debe contener las columnas: {', '.join(missing_cols)}. No se distingue entre mayúsculas y minúsculas."
+    if 'email' not in columns_lower:
+        return None, "El archivo CSV debe contener la columna 'email'.", False
 
-    return columns, None
+    needs_docnum_generation = 'docnum' not in columns_lower
 
-def generate_preview_data(filepath, selected_columns):
+    return columns, None, needs_docnum_generation
+
+def process_dataframe_logic(df, needs_docnum_generation):
+    """
+    Aplica la lógica de negocio principal a un DataFrame (chunk o preview).
+    - Genera docnum si es necesario.
+    - Limpia el email.
+    """
+    email_col_name = next((col for col in df.columns if col.lower() == 'email'), None)
+    if not email_col_name:
+        return df
+
+    if needs_docnum_generation:
+        # Extrae docnum de <...> y lo asigna a una nueva columna
+        df['docnum'] = df[email_col_name].str.extract(r'<([^>]*)>').fillna('')
+        # Limpia la columna de email, eliminando la parte extraída
+        df[email_col_name] = df[email_col_name].str.replace(r'\s*<[^>]*>\s*', '', regex=True).str.strip()
+    
+    # Aplica la limpieza de email estándar para otros casos
+    df[email_col_name] = df[email_col_name].apply(clean_email)
+    
+    return df
+
+def generate_preview_data(filepath, selected_columns, needs_docnum_generation):
     """
     Genera una previsualización de datos de un archivo CSV.
-    Devuelve: (preview_data, error_mensaje)
+    Devuelve: (preview_data, columnas_actualizadas, error_mensaje)
     """
     try:
         encoding = get_csv_encoding(filepath)
-        df_preview = pd.read_csv(filepath, usecols=selected_columns, nrows=10, encoding=encoding, sep=app.config['CSV_SEPARATOR'])
+        
+        cols_to_read = selected_columns.copy()
+        if needs_docnum_generation and 'docnum' in cols_to_read:
+            cols_to_read.remove('docnum')
 
-        df_preview = df_preview[selected_columns]
+        df_preview = pd.read_csv(filepath, usecols=cols_to_read, nrows=10, encoding=encoding, sep=app.config['CSV_SEPARATOR'])
 
-        email_col_name = next((col for col in selected_columns if col.lower() == 'email'), None)
+        df_preview = process_dataframe_logic(df_preview, needs_docnum_generation)
 
-        if email_col_name:
-            df_preview[email_col_name] = df_preview[email_col_name].apply(clean_email)
+        final_columns = selected_columns.copy()
+        if needs_docnum_generation and 'docnum' not in final_columns:
+            final_columns.insert(1, 'docnum') # Insertar docnum después de email
 
         df_preview = df_preview.fillna('')
         
-        return df_preview.to_dict(orient='records'), None
+        # Asegurarse de que todas las columnas seleccionadas existan, incluso si están vacías
+        for col in final_columns:
+            if col not in df_preview.columns:
+                df_preview[col] = ''
+
+        return df_preview.to_dict(orient='records'), final_columns, None
 
     except KeyError:
-        return None, "Una de las columnas seleccionadas no se encontró en el archivo. Esto puede ocurrir si el CSV tiene una estructura inconsistente."
-    except Exception:
-        return None, "Ocurrió un error al generar la previsualización. Verificá que las columnas seleccionadas sean correctas."
+        return None, None, "Una de las columnas seleccionadas no se encontró en el archivo. Esto puede ocurrir si el CSV tiene una estructura inconsistente."
+    except Exception as e:
+        return None, None, f"Ocurrió un error al generar la previsualización: {str(e)}"
 
 def reorder_chunk_columns(chunk, selected_columns):
     """
@@ -104,7 +134,7 @@ def reorder_chunk_columns(chunk, selected_columns):
 
 # --- Tarea en Segundo Plano para Procesamiento de CSV ---
 
-def process_csv_task(task_id, filepath, selected_columns, output_path):
+def process_csv_task(task_id, filepath, selected_columns, needs_docnum_generation, output_path):
     """La función que se ejecuta en segundo plano para procesar el CSV."""
     try:
         encoding = get_csv_encoding(filepath)
@@ -114,12 +144,15 @@ def process_csv_task(task_id, filepath, selected_columns, output_path):
         chunk_size = app.config['CHUNK_SIZE']
         first_chunk = True
 
-        for chunk in pd.read_csv(filepath, usecols=selected_columns, chunksize=chunk_size, encoding=encoding, sep=app.config['CSV_SEPARATOR']):
-            
-            chunk.columns = [col.lower() for col in chunk.columns]
+        cols_to_read = selected_columns.copy()
+        if needs_docnum_generation and 'docnum' in cols_to_read:
+            cols_to_read.remove('docnum')
 
-            if 'email' in chunk.columns:
-                chunk['email'] = chunk['email'].apply(clean_email)
+        for chunk in pd.read_csv(filepath, usecols=cols_to_read, chunksize=chunk_size, encoding=encoding, sep=app.config['CSV_SEPARATOR']):
+            
+            chunk = process_dataframe_logic(chunk, needs_docnum_generation)
+
+            chunk.columns = [col.lower() for col in chunk.columns]
 
             chunk = reorder_chunk_columns(chunk, selected_columns)
             
@@ -174,13 +207,17 @@ def get_columns():
     try:
         file.save(filepath)
         
-        columns, error_message = validate_and_get_columns(filepath)
+        columns, error_message, needs_docnum_generation = validate_and_get_columns(filepath)
 
         if error_message:
             os.remove(filepath)
             return jsonify({"error": error_message}), 400
 
-        return jsonify({"columns": columns, "filepath": filepath})
+        return jsonify({
+            "columns": columns, 
+            "filepath": filepath,
+            "needs_docnum_generation": needs_docnum_generation
+        })
 
     except Exception as e:
         if os.path.exists(filepath):
@@ -193,16 +230,17 @@ def preview_file():
     data = request.get_json()
     filepath = data.get('filepath')
     selected_columns = data.get('columns')
+    needs_docnum_generation = data.get('needs_docnum_generation', False)
 
     if not filepath or not os.path.exists(filepath):
         return jsonify({"error": "No se pudo encontrar el archivo original para la previsualización. Por favor, intentá subir el archivo de nuevo."}), 400
 
-    preview_data, error_message = generate_preview_data(filepath, selected_columns)
+    preview_data, final_columns, error_message = generate_preview_data(filepath, selected_columns, needs_docnum_generation)
 
     if error_message:
         return jsonify({"error": error_message}), 500
 
-    return jsonify({"preview": preview_data, "columns": selected_columns})
+    return jsonify({"preview": preview_data, "columns": final_columns})
 
 @app.route('/api/process-file', methods=['POST'])
 def process_file_request():
@@ -210,6 +248,7 @@ def process_file_request():
     data = request.get_json()
     filepath = data.get('filepath')
     selected_columns = data.get('columns')
+    needs_docnum_generation = data.get('needs_docnum_generation', False)
 
     if not filepath or not os.path.exists(filepath):
         return jsonify({"error": "No se pudo encontrar el archivo original para iniciar el proceso. Por favor, intentá subir el archivo de nuevo."}), 400
@@ -221,7 +260,7 @@ def process_file_request():
 
     tasks[task_id] = {'status': 'processing', 'progress': 0}
 
-    thread = threading.Thread(target=process_csv_task, args=(task_id, filepath, selected_columns, output_path))
+    thread = threading.Thread(target=process_csv_task, args=(task_id, filepath, selected_columns, needs_docnum_generation, output_path))
     thread.start()
 
     return jsonify({'task_id': task_id})

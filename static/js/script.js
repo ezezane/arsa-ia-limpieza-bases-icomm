@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentOrderedColumns: [],
             draggedItem: null,
             modalTimeout: null,
+            needs_docnum_generation: false, // Flag para la nueva funcionalidad
         },
 
         // --- DOM ELEMENTS ---
@@ -15,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
             fileUploadLabel: document.querySelector('.file-upload-label'),
             fileNameDisplay: document.getElementById('file-name'),
             uploadInstructionText: document.getElementById('upload-instruction-text'),
+            notificationArea: document.getElementById('notification-area'), // Área para notificaciones
             columnsSection: document.getElementById('columns-section'),
             columnsList: document.getElementById('columns-list'),
             previewBtn: document.getElementById('preview-btn'),
@@ -49,7 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- UI MODULE ---
         ui: {
             showModal(message, type = 'info', autoHide = true) {
-                const { modal, modalContent, closeModalBtn } = App.elements;
+                const { modal, modalContent } = App.elements;
                 clearTimeout(App.state.modalTimeout);
                 App.elements.modalMessage.textContent = message;
                 modalContent.className = 'modal-content';
@@ -209,22 +211,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 return data;
             },
 
-            async previewFile(filepath, columns) {
+            async previewFile(filepath, columns, needs_docnum_generation) {
                 const response = await fetch('/api/preview-file', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ filepath, columns }),
+                    body: JSON.stringify({ filepath, columns, needs_docnum_generation }),
                 });
                 const data = await response.json();
                 if (!response.ok) throw new Error(data.error || 'Error en la previsualización.');
                 return data;
             },
 
-            async processFile(filepath, columns) {
+            async processFile(filepath, columns, needs_docnum_generation) {
                 const response = await fetch('/api/process-file', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ filepath, columns }),
+                    body: JSON.stringify({ filepath, columns, needs_docnum_generation }),
                 });
                 const data = await response.json();
                 if (!response.ok) throw new Error(data.error || 'Error al iniciar el proceso.');
@@ -268,10 +270,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 elements.fileNameDisplay.textContent = file.name;
                 ui.setLoading(elements.fileUploadLabel, 'Cargando...');
+                elements.notificationArea.classList.add('hidden'); // Ocultar notificación
 
                 try {
                     const data = await App.api.getColumns(file);
                     state.originalFilepath = data.filepath;
+                    state.needs_docnum_generation = data.needs_docnum_generation;
+
+                    if (state.needs_docnum_generation) {
+                        elements.notificationArea.textContent = "No se encontró la columna 'docnum'. Se generará extrayendo los datos del campo 'email'. Por favor, revise la previsualización para confirmar el resultado.";
+                        elements.notificationArea.classList.remove('hidden');
+                    }
+
                     ui.populateColumnsList(data.columns);
                     ui.showSection('columnsSection');
                     ui.showModal('Archivo cargado y columnas obtenidas.', 'success');
@@ -315,7 +325,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         ui.populateReorderList(selectedColumns);
                         ui.showSection('reorderSection');
                     } else {
-                        const data = await api.previewFile(state.originalFilepath, selectedColumns);
+                        const data = await api.previewFile(state.originalFilepath, selectedColumns, state.needs_docnum_generation);
                         state.currentOrderedColumns = data.columns;
                         ui.displayPreview(data.preview, data.columns);
                         ui.showSection('previewSection');
@@ -332,7 +342,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const finalOrderedColumns = Array.from(elements.reorderColumnsList.children).map(item => item.querySelector('label').textContent);
                 ui.setLoading(elements.confirmReorderBtn, 'Cargando...');
                 try {
-                    const data = await api.previewFile(state.originalFilepath, finalOrderedColumns);
+                    const data = await api.previewFile(state.originalFilepath, finalOrderedColumns, state.needs_docnum_generation);
                     state.currentOrderedColumns = data.columns;
                     ui.displayPreview(data.preview, data.columns);
                     ui.showSection('previewSection');
@@ -354,7 +364,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 ui.updateProgress(0, 'Iniciando...');
 
                 try {
-                    const { task_id } = await api.processFile(state.originalFilepath, state.currentOrderedColumns);
+                    const { task_id } = await api.processFile(state.originalFilepath, state.currentOrderedColumns, state.needs_docnum_generation);
                     ui.updateProgress(0, 'Preparando el archivo...');
 
                     const pollInterval = setInterval(async () => {

@@ -42,3 +42,43 @@ Desarrollar una herramienta web interna para limpiar y filtrar archivos CSV expo
 *   **Frontend:** HTML5, CSS3, JavaScript (sin frameworks).
 *   **Backend:** Python, utilizando la librería **Pandas** para la manipulación eficiente de grandes volúmenes de datos.
 
+---
+
+## Feature: Generación Automática de `docnum` para Bases de Actividad
+
+### 1. Objetivo
+
+Dar soporte a los archivos CSV de "actividad" que no contienen la columna `docnum`, pero que tienen esta información anidada dentro del campo `email`.
+
+### 2. Lógica de Negocio
+
+Cuando un archivo CSV es subido, el sistema debe:
+
+-   **Detectar automáticamente** si el archivo contiene la columna `email` pero carece de la columna `docnum`.
+-   Si este es el caso, **no debe fallar la validación**. En su lugar, debe activar un flujo de procesamiento especial.
+
+El flujo especial consiste en:
+
+1.  **Crear una nueva columna `docnum`** en los datos.
+2.  Para cada fila, **analizar el campo `email`**:
+    -   Extraer el contenido que se encuentre entre los caracteres `<` y `>`.
+    -   Asignar el valor extraído al campo `docnum` de esa fila.
+    -   Si no se encuentra contenido entre `<` y `>`, el campo `docnum` debe quedar vacío.
+3.  **Limpiar el campo `email`**: Después de la extracción, el campo `email` también debe ser limpiado para que contenga solo la dirección de correo (si aplica), manteniendo la consistencia con la función `clean_email` existente.
+
+### 3. Interfaz de Usuario y Experiencia (UX)
+
+Para mantener la simplicidad de la interfaz, no se añadirá un switch o botón manual. El proceso será automático, pero se notificará al usuario:
+
+-   **Notificación en el Frontend:** Cuando se detecte la ausencia de `docnum`, la interfaz mostrará un mensaje informativo al usuario.
+    -   *Ejemplo de mensaje:* "No se encontró la columna 'docnum'. Se generará extrayendo los datos del campo 'email'. Por favor, revise la previsualización para confirmar el resultado."
+-   **Verificación en Previsualización:** El usuario podrá ver la nueva columna `docnum` y los datos extraídos en la tabla de previsualización. Este paso es crucial para que el usuario valide que la extracción automática fue correcta antes de procesar el archivo completo.
+
+### 4. Impacto en el Código
+
+-   **`app.py`**:
+    -   `validate_and_get_columns`: Modificar para que no falle si `docnum` está ausente, y en su lugar, devuelva un indicador de que se necesita generar el `docnum`.
+    -   `generate_preview_data`: Añadir la lógica para crear el `docnum` y mostrarlo en la previsualización.
+    -   `process_csv_task`: Añadir la misma lógica de creación de `docnum` durante el procesamiento final por chunks.
+-   **`script.js`**:
+    -   Añadir la lógica para recibir el indicador desde el backend y mostrar el mensaje de notificación al usuario.
