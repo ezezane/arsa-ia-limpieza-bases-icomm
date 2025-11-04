@@ -7,6 +7,17 @@ document.addEventListener('DOMContentLoaded', () => {
             draggedItem: null,
             modalTimeout: null,
             needs_docnum_generation: false, // Flag para la nueva funcionalidad
+
+            // --- Estado para Exportación Múltiple ---
+            multiExportFile: null, // El objeto File seleccionado
+            multiExportFilepath: '', // La ruta temporal del archivo en el servidor
+            multiExportUniqueData: {}, // Datos únicos extraídos (bancos, tarjetas, etc.)
+            multiExportSelectedItems: { // Items seleccionados por el usuario para exportar
+                bancos: [],
+                tarjetas: [],
+                cobrands: [],
+                partners: []
+            },
         },
 
         // --- DOM ELEMENTS ---
@@ -44,10 +55,20 @@ document.addEventListener('DOMContentLoaded', () => {
             // --- Elementos para Exportación Múltiple ---
             multiUploadForm: document.getElementById('multi-upload-form'),
             multiCsvFileInput: document.getElementById('multi-csv-file'),
+            multiFileUploadLabel: document.getElementById('multi-file-upload-label'), // Nuevo
             multiFileNameDisplay: document.getElementById('multi-file-name'),
+            multiUploadBtn: document.getElementById('multi-upload-btn'), // Nuevo
+            multiUploadProgressSection: document.getElementById('multi-upload-progress-section'), // Nuevo
+            multiUploadProgress: document.getElementById('multi-upload-progress'), // Nuevo
+            multiUploadProgressText: document.getElementById('multi-upload-progress-text'), // Nuevo
             multiNotificationArea: document.getElementById('multi-notification-area'),
-            multiProgressSection: document.getElementById('multi-progress-section'),
-            multiProgressText: document.getElementById('multi-progress-text'),
+            multiSelectionSection: document.getElementById('multi-selection-section'), // Nuevo
+            multiCategorySelection: document.getElementById('multi-category-selection'), // Nuevo
+            multiItemSelection: document.getElementById('multi-item-selection'), // Nuevo
+            multiStartExportBtn: document.getElementById('multi-start-export-btn'), // Nuevo
+            multiProcessingProgressSection: document.getElementById('multi-processing-progress-section'), // Nuevo
+            multiProcessingProgress: document.getElementById('multi-processing-progress'), // Nuevo
+            multiProcessingProgressText: document.getElementById('multi-processing-progress-text'), // Nuevo
             multiDownloadSection: document.getElementById('multi-download-section'),
             multiDownloadLink: document.getElementById('multi-download-link'),
         },
@@ -201,10 +222,84 @@ document.addEventListener('DOMContentLoaded', () => {
                 progressText.textContent = text;
             },
 
+            updateMultiExportProgress(progress, text) {
+                const { multiProcessingProgress, multiProcessingProgressText } = App.elements;
+                multiProcessingProgress.style.width = `${progress}%`;
+                multiProcessingProgress.textContent = `${progress}%`;
+                multiProcessingProgressText.textContent = text;
+            },
+
+            populateMultiExportSelection(uniqueData) {
+                const { multiCategorySelection, multiItemSelection, multiStartExportBtn } = App.elements;
+                multiCategorySelection.innerHTML = '';
+                multiItemSelection.innerHTML = '';
+                App.state.multiExportSelectedItems = { bancos: [], tarjetas: [], cobrands: [], partners: [] }; // Reset selections
+
+                const categories = {
+                    bancos: 'Bancos',
+                    tarjetas: 'Tarjetas',
+                    cobrands: 'Cobrands',
+                    partners: 'Partners'
+                };
+
+                for (const categoryKey in categories) {
+                    if (uniqueData[categoryKey] && uniqueData[categoryKey].length > 0) {
+                        const categoryDiv = document.createElement('div');
+                        categoryDiv.classList.add('multi-category-item');
+
+                        const categoryCheckbox = document.createElement('input');
+                        categoryCheckbox.type = 'checkbox';
+                        categoryCheckbox.id = `category-${categoryKey}`;
+                        categoryCheckbox.value = categoryKey;
+                        categoryCheckbox.addEventListener('change', App.handlers.handleMultiCategoryChange);
+
+                        const categoryLabel = document.createElement('label');
+                        categoryLabel.htmlFor = `category-${categoryKey}`;
+                        categoryLabel.textContent = categories[categoryKey];
+
+                        categoryDiv.appendChild(categoryCheckbox);
+                        categoryDiv.appendChild(categoryLabel);
+                        multiCategorySelection.appendChild(categoryDiv);
+
+                        const itemsDiv = document.createElement('div');
+                        itemsDiv.id = `items-${categoryKey}`;
+                        itemsDiv.classList.add('multi-item-list', 'hidden'); // Hidden by default
+                        
+                        uniqueData[categoryKey].forEach(item => {
+                            const itemCheckbox = document.createElement('input');
+                            itemCheckbox.type = 'checkbox';
+                            itemCheckbox.id = `item-${categoryKey}-${item}`;
+                            itemCheckbox.value = item;
+                            itemCheckbox.dataset.category = categoryKey;
+                            itemCheckbox.addEventListener('change', App.handlers.handleMultiItemChange);
+
+                            const itemLabel = document.createElement('label');
+                            itemLabel.htmlFor = `item-${categoryKey}-${item}`;
+                            itemLabel.textContent = item;
+
+                            const itemDiv = document.createElement('div');
+                            itemDiv.classList.add('multi-item-checkbox');
+                            itemDiv.appendChild(itemCheckbox);
+                            itemDiv.appendChild(itemLabel);
+                            itemsDiv.appendChild(itemDiv);
+                        });
+                        multiItemSelection.appendChild(itemsDiv);
+                    }
+                }
+                multiStartExportBtn.disabled = true; // Initially disabled
+            },
+
             showSection(section) {
+                // Hide all sections for main cleaning
                 ['columnsSection', 'previewSection', 'reorderSection', 'progressSection', 'downloadSection'].forEach(s => {
                     App.elements[s].classList.add('hidden');
                 });
+                // Hide all sections for multi-export
+                ['multiUploadProgressSection', 'multiSelectionSection', 'multiProcessingProgressSection', 'multiDownloadSection'].forEach(s => {
+                    App.elements[s].classList.add('hidden');
+                });
+
+                // Show the requested section
                 if (section) {
                     App.elements[section].classList.remove('hidden');
                 }
@@ -251,18 +346,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 return data;
             },
 
-            async multiExportFile(file) {
+            // --- Nuevas funciones para Exportación Múltiple ---
+            async multiExportInitialProcess(file) {
                 const formData = new FormData();
                 formData.append('csv_file', file);
-                const response = await fetch('/multi-export', { 
-                    method: 'POST', 
-                    body: formData 
+                const response = await fetch('/api/multi-export-initial-process', {
+                    method: 'POST',
+                    body: formData
                 });
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Error desconocido en el servidor.');
-                }
-                return response.blob(); // Devuelve el blob del zip
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Error en el procesamiento inicial de exportación múltiple.');
+                return data;
+            },
+
+            async multiExportProcess(filepath, selectedItems) {
+                const response = await fetch('/api/multi-export-process', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filepath, selected_items: selectedItems }),
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Error al iniciar el proceso de exportación múltiple.');
+                return data;
             },
         },
 
@@ -281,9 +386,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 elements.closeModalBtn.addEventListener('click', App.ui.hideModal);
                 window.addEventListener('click', (e) => e.target === elements.modal && App.ui.hideModal());
 
-                // Listener para el nuevo formulario de exportación múltiple
+                // Listeners para Exportación Múltiple
                 if (elements.multiCsvFileInput) {
                     elements.multiCsvFileInput.addEventListener('change', handlers.handleMultiExportFileSelect);
+                    elements.multiUploadBtn.addEventListener('click', handlers.handleMultiUpload);
+                    elements.multiStartExportBtn.addEventListener('click', handlers.handleMultiStartExport);
                 }
 
                 // Listener para las pestañas
@@ -459,37 +566,144 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             },
 
-            async handleMultiExportFileSelect(event) {
+            // --- Handlers para Exportación Múltiple ---
+            handleMultiExportFileSelect(event) {
                 const file = event.target.files[0];
-                const { multiFileNameDisplay, multiProgressSection, multiDownloadSection, multiDownloadLink, multiProgressText } = App.elements;
-                const { ui, api } = App;
+                const { elements, state } = App;
+
+                state.multiExportFile = file; // Store the file object
+
+                if (file) {
+                    elements.multiFileNameDisplay.textContent = file.name;
+                    elements.multiUploadBtn.disabled = false; // Enable upload button
+                } else {
+                    elements.multiFileNameDisplay.textContent = '';
+                    elements.multiUploadBtn.disabled = true; // Disable upload button
+                }
+                // Reset UI for multi-export
+                App.ui.showSection(null); // Hide all sections
+                elements.multiNotificationArea.classList.add('hidden');
+                elements.multiUploadProgressSection.classList.add('hidden');
+                elements.multiSelectionSection.classList.add('hidden');
+                elements.multiProcessingProgressSection.classList.add('hidden');
+                elements.multiDownloadSection.classList.add('hidden');
+            },
+
+            async handleMultiUpload() {
+                const { elements, ui, api, state } = App;
+                const file = state.multiExportFile;
 
                 if (!file) {
-                    multiFileNameDisplay.textContent = '';
+                    ui.showModal('Por favor, seleccioná un archivo CSV para subir.', 'error');
                     return;
                 }
 
-                multiFileNameDisplay.textContent = file.name;
-                multiProgressSection.classList.remove('hidden');
-                multiDownloadSection.classList.add('hidden');
-                multiProgressText.textContent = 'Subiendo y procesando archivo...';
+                ui.setLoading(elements.multiUploadBtn, 'Subiendo...');
+                elements.multiUploadProgressSection.classList.remove('hidden');
+                elements.multiUploadProgressText.textContent = 'Subiendo archivo...';
+                elements.multiUploadProgress.style.width = '0%';
+                elements.multiUploadProgress.textContent = '0%';
 
                 try {
-                    const blob = await api.multiExportFile(file);
-                    const url = window.URL.createObjectURL(blob);
-                    multiDownloadLink.href = url;
-                    multiDownloadLink.download = 'exportacion_multiple.zip';
-                    
-                    multiProgressSection.classList.add('hidden');
-                    multiDownloadSection.classList.remove('hidden');
-                    ui.showModal('¡Archivos generados con éxito!', 'success');
+                    const data = await api.multiExportInitialProcess(file);
+                    state.multiExportFilepath = data.filepath;
+                    state.multiExportUniqueData = data.unique_data;
 
+                    ui.showModal('Archivo subido y datos iniciales procesados.', 'success');
+                    ui.populateMultiExportSelection(data.unique_data);
+                    ui.showSection('multiSelectionSection'); // Show selection section
                 } catch (error) {
-                    multiProgressSection.classList.add('hidden');
                     ui.showModal(error.message, 'error');
+                    App.ui.showSection(null); // Hide all sections on error
                 } finally {
-                    // Limpiar el input para permitir subir el mismo archivo de nuevo
-                    event.target.value = '';
+                    ui.resetLoading(elements.multiUploadBtn);
+                    elements.multiUploadProgressSection.classList.add('hidden'); // Hide upload progress
+                }
+            },
+
+            handleMultiCategoryChange(event) {
+                const categoryKey = event.target.value;
+                const itemsDiv = document.getElementById(`items-${categoryKey}`);
+                if (event.target.checked) {
+                    itemsDiv.classList.remove('hidden');
+                } else {
+                    itemsDiv.classList.add('hidden');
+                    // Deselect all items in this category if category is unchecked
+                    Array.from(itemsDiv.querySelectorAll('input[type="checkbox"]')).forEach(cb => {
+                        cb.checked = false;
+                        const itemValue = cb.value;
+                        App.state.multiExportSelectedItems[categoryKey] = App.state.multiExportSelectedItems[categoryKey].filter(item => item !== itemValue);
+                    });
+                }
+                App.handlers.updateMultiExportStartButtonState();
+            },
+
+            handleMultiItemChange(event) {
+                const itemValue = event.target.value;
+                const categoryKey = event.target.dataset.category;
+
+                if (event.target.checked) {
+                    App.state.multiExportSelectedItems[categoryKey].push(itemValue);
+                } else {
+                    App.state.multiExportSelectedItems[categoryKey] = App.state.multiExportSelectedItems[categoryKey].filter(item => item !== itemValue);
+                }
+                App.handlers.updateMultiExportStartButtonState();
+            },
+
+            updateMultiExportStartButtonState() {
+                const { multiStartExportBtn } = App.elements;
+                const { multiExportSelectedItems } = App.state;
+                const hasSelections = Object.values(multiExportSelectedItems).some(arr => arr.length > 0);
+                multiStartExportBtn.disabled = !hasSelections;
+            },
+
+            async handleMultiStartExport() {
+                const { elements, ui, api, state } = App;
+                const filepath = state.multiExportFilepath;
+                const selectedItems = state.multiExportSelectedItems;
+
+                if (!filepath) {
+                    ui.showModal('No se ha subido ningún archivo para procesar.', 'error');
+                    return;
+                }
+                if (Object.values(selectedItems).every(arr => arr.length === 0)) {
+                    ui.showModal('Por favor, seleccioná al menos un elemento para exportar.', 'error');
+                    return;
+                }
+
+                ui.setLoading(elements.multiStartExportBtn, 'Iniciando...');
+                ui.showSection('multiProcessingProgressSection');
+                ui.updateMultiExportProgress(0, 'Preparando exportación...');
+
+                try {
+                    const { task_id } = await api.multiExportProcess(filepath, selectedItems);
+                    ui.updateMultiExportProgress(0, 'Procesando archivo...');
+
+                    const pollInterval = setInterval(async () => {
+                        try {
+                            const progressData = await api.checkProgress(task_id);
+                            if (progressData.status === 'processing') {
+                                ui.updateMultiExportProgress(progressData.progress, `Procesando... (${progressData.progress}%)`);
+                            } else if (progressData.status === 'complete') {
+                                clearInterval(pollInterval);
+                                ui.updateMultiExportProgress(100, '¡Completado!');
+                                elements.multiDownloadLink.href = progressData.result;
+                                ui.showSection('multiDownloadSection');
+                                ui.showModal('¡Archivos de exportación múltiple generados con éxito!', 'success');
+                                ui.resetLoading(elements.multiStartExportBtn);
+                            } else if (progressData.status === 'error') {
+                                clearInterval(pollInterval);
+                                throw new Error(progressData.error);
+                            }
+                        } catch (pollError) {
+                            clearInterval(pollInterval);
+                            throw pollError;
+                        }
+                    }, 2000);
+                } catch (error) {
+                    ui.showSection('multiSelectionSection'); // Go back to selection on error
+                    ui.showModal(error.message, 'error');
+                    ui.resetLoading(elements.multiStartExportBtn);
                 }
             },
         },

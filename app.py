@@ -282,8 +282,8 @@ def download_file(filename):
     return send_from_directory(app.config['DOWNLOAD_FOLDER'], filename, as_attachment=True)
 
 
-@app.route('/multi-export', methods=['POST'])
-def multi_export():
+@app.route('/api/multi-export-initial-process', methods=['POST'])
+def multi_export_initial_process():
     if 'csv_file' not in request.files:
         return jsonify({"error": "No se ha subido ningún archivo."}), 400
 
@@ -291,42 +291,165 @@ def multi_export():
     if file.filename == '' or not file.filename.endswith('.csv'):
         return jsonify({"error": "Archivo no válido. Por favor, sube un archivo .csv."}), 400
 
+    temp_filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+    try:
+        file.save(temp_filepath)
+
+        encoding = get_csv_encoding(temp_filepath)
+        try:
+            df = pd.read_csv(temp_filepath, sep=app.config['CSV_SEPARATOR'], encoding=encoding)
+        except UnicodeDecodeError:
+            encoding = 'latin-1'
+            df = pd.read_csv(temp_filepath, sep=app.config['CSV_SEPARATOR'], encoding=encoding)
+
+        all_banks = set()
+        all_cards = set()
+        all_cobrands = set()
+        all_partners = set()
+
+        if 'EMIS_BANCOS' in df.columns:
+            for item_str in df['EMIS_BANCOS'].dropna().unique():
+                if isinstance(item_str, str):
+                    for item in item_str.split(','):
+                        cleaned_item = item.strip()
+                        if cleaned_item and cleaned_item != 'OTROS_BANCOS':
+                            all_banks.add(cleaned_item)
+
+        if 'EMIS_TARJETAS' in df.columns:
+            for item_str in df['EMIS_TARJETAS'].dropna().unique():
+                if isinstance(item_str, str):
+                    for item in item_str.split(','):
+                        cleaned_item = item.strip()
+                        if cleaned_item and cleaned_item != 'OTRAS_TARJETAS':
+                            all_cards.add(cleaned_item)
+
+        if 'PLUS_PARTNER_COBRAND' in df.columns:
+            for item_str in df['PLUS_PARTNER_COBRAND'].dropna().unique():
+                if isinstance(item_str, str):
+                    for item in item_str.split(','):
+                        cleaned_item = item.strip()
+                        if cleaned_item:
+                            all_cobrands.add(cleaned_item)
+
+        if 'PLUS_PARTNER_EMPRESAS' in df.columns:
+            for item_str in df['PLUS_PARTNER_EMPRESAS'].dropna().unique():
+                if isinstance(item_str, str):
+                    for item in item_str.split(','):
+                        cleaned_item = item.strip()
+                        if cleaned_item:
+                            all_partners.add(cleaned_item)
+
+        return jsonify({
+            "filepath": temp_filepath,
+            "unique_data": {
+                "bancos": sorted(list(all_banks)),
+                "tarjetas": sorted(list(all_cards)),
+                "cobrands": sorted(list(all_cobrands)),
+                "partners": sorted(list(all_partners))
+            }
+        })
+
+    except UnicodeDecodeError:
+        if os.path.exists(temp_filepath):
+            os.remove(temp_filepath)
+        return jsonify({"error": "Error de codificación: El archivo no pudo ser leído correctamente. Asegúrate de que esté en formato UTF-8 o Latin-1."}), 400
+    except Exception as e:
+        if os.path.exists(temp_filepath):
+            os.remove(temp_filepath)
+        return jsonify({"error": f"Ocurrió un error inesperado durante el procesamiento inicial: {e}"}), 500
+
+def multi_export_process_task(task_id, filepath, selected_categories_and_items, output_zip_path):
     try:
         # --- Cargar configuración ---
         with open('config/bancos_conocidos.txt', 'r') as f:
             known_banks = set(line.strip() for line in f)
         with open('config/tarjetas_conocidas.txt', 'r') as f:
             known_cards = set(line.strip() for line in f)
+        with open('config/arplus_cobrand.txt', 'r') as f:
+            known_cobrands = set(line.strip() for line in f)
+        with open('config/arplus_partners.txt', 'r') as f:
+            known_partners = set(line.strip() for line in f)
 
         # --- Leer CSV ---
-        df = pd.read_csv(file, sep=app.config['CSV_SEPARATOR'], usecols=['email', 'EMIS_BANCOS', 'EMIS_TARJETAS'], encoding=get_csv_encoding(file))
+        encoding = get_csv_encoding(filepath)
+        try:
+            df = pd.read_csv(filepath, sep=app.config['CSV_SEPARATOR'], encoding=encoding)
+        except UnicodeDecodeError:
+            encoding = 'latin-1'
+            df = pd.read_csv(filepath, sep=app.config['CSV_SEPARATOR'], encoding=encoding)
+
+        # Check for required columns
+        required_cols = ['email']
+        if 'bancos' in selected_categories_and_items:
+            required_cols.append('EMIS_BANCOS')
+        if 'tarjetas' in selected_categories_and_items:
+            required_cols.append('EMIS_TARJETAS')
+        if 'cobrands' in selected_categories_and_items:
+            required_cols.append('PLUS_PARTNER_COBRAND')
+        if 'partners' in selected_categories_and_items:
+            required_cols.append('PLUS_PARTNER_EMPRESAS')
+
+        missing_cols = [col for col in required_cols if col not in df.columns]
+        if missing_cols:
+            tasks[task_id]['status'] = 'error'
+            tasks[task_id]['error'] = f"Faltan las siguientes columnas en el archivo CSV: {', '.join(missing_cols)}"
+            return
 
         # --- Procesar datos ---
         data_for_csv = {}
+        total_rows = len(df)
+        processed_rows = 0
+
         for _, row in df.iterrows():
             email = row['email']
             if pd.isna(email):
                 continue
+            
+            # Clean the email field
+            email = clean_email(email)
 
             # Procesar bancos
-            if pd.notna(row['EMIS_BANCOS']):
+            if 'bancos' in selected_categories_and_items and pd.notna(row.get('EMIS_BANCOS')):
                 banks = str(row['EMIS_BANCOS']).split(',')
                 for bank in banks:
                     bank = bank.strip()
-                    if bank in known_banks:
+                    if bank in known_banks and bank in selected_categories_and_items['bancos']:
                         if bank not in data_for_csv:
-                            data_for_csv[bank] = []
-                        data_for_csv[bank].append(email)
+                            data_for_csv[f"banco_{bank}"] = []
+                        data_for_csv[f"banco_{bank}"].append(email)
             
             # Procesar tarjetas
-            if pd.notna(row['EMIS_TARJETAS']):
+            if 'tarjetas' in selected_categories_and_items and pd.notna(row.get('EMIS_TARJETAS')):
                 cards = str(row['EMIS_TARJETAS']).split(',')
                 for card in cards:
                     card = card.strip()
-                    if card in known_cards:
+                    if card in known_cards and card in selected_categories_and_items['tarjetas']:
                         if card not in data_for_csv:
-                            data_for_csv[card] = []
-                        data_for_csv[card].append(email)
+                            data_for_csv[f"tarjeta_{card}"] = []
+                        data_for_csv[f"tarjeta_{card}"].append(email)
+
+            # Procesar cobrands
+            if 'cobrands' in selected_categories_and_items and pd.notna(row.get('PLUS_PARTNER_COBRAND')):
+                cobrands = str(row['PLUS_PARTNER_COBRAND']).split(',')
+                for cobrand in cobrands:
+                    cobrand = cobrand.strip()
+                    if cobrand in known_cobrands and cobrand in selected_categories_and_items['cobrands']:
+                        if cobrand not in data_for_csv:
+                            data_for_csv[f"cobrand_{cobrand}"] = []
+                        data_for_csv[f"cobrand_{cobrand}"].append(email)
+
+            # Procesar partners
+            if 'partners' in selected_categories_and_items and pd.notna(row.get('PLUS_PARTNER_EMPRESAS')):
+                partners = str(row['PLUS_PARTNER_EMPRESAS']).split(',')
+                for partner in partners:
+                    partner = partner.strip()
+                    if partner in known_partners and partner in selected_categories_and_items['partners']:
+                        if partner not in data_for_csv:
+                            data_for_csv[f"partner_{partner}"] = []
+                        data_for_csv[f"partner_{partner}"].append(email)
+            
+            processed_rows += 1
+            tasks[task_id]['progress'] = round((processed_rows / total_rows) * 100)
 
         # --- Crear ZIP en memoria ---
         memory_file = io.BytesIO()
@@ -339,17 +462,49 @@ def multi_export():
         
         memory_file.seek(0)
         
-        return send_file(
-            memory_file,
-            download_name='exportacion_multiple.zip',
-            as_attachment=True,
-            mimetype='application/zip'
-        )
+        # Save the zip file to disk
+        with open(output_zip_path, 'wb') as f:
+            f.write(memory_file.getvalue())
 
-    except (FileNotFoundError, KeyError) as e:
-        return jsonify({"error": f"Faltan archivos de configuración o columnas en el CSV. Revisa que existan 'config/bancos_conocidos.txt', 'config/tarjetas_conocidas.txt' y las columnas 'email', 'EMIS_BANCOS', 'EMIS_TARJETAS'. Error: {e}"}), 500
+        tasks[task_id]['status'] = 'complete'
+        tasks[task_id]['result'] = f'/downloads/{os.path.basename(output_zip_path)}'
+
+    except FileNotFoundError as e:
+        tasks[task_id]['status'] = 'error'
+        tasks[task_id]['error'] = f"Faltan archivos de configuración o el archivo CSV original. Detalle: {e}"
+    except KeyError as e:
+        tasks[task_id]['status'] = 'error'
+        tasks[task_id]['error'] = f"Una columna esperada no se encontró en el archivo CSV. Detalle: {e}"
     except Exception as e:
-        return jsonify({"error": f"Ocurrió un error inesperado: {e}"}), 500
+        tasks[task_id]['status'] = 'error'
+        tasks[task_id]['error'] = f"Ocurrió un error inesperado durante la exportación múltiple: {e}"
+    finally:
+        # Clean up the temporary CSV file
+        if os.path.exists(filepath):
+            os.remove(filepath)
+
+@app.route('/api/multi-export-process', methods=['POST'])
+def multi_export_process_request():
+    data = request.get_json()
+    filepath = data.get('filepath')
+    selected_categories_and_items = data.get('selected_items')
+
+    if not filepath or not os.path.exists(filepath):
+        return jsonify({"error": "No se pudo encontrar el archivo original para iniciar el proceso. Por favor, intentá subir el archivo de nuevo."}), 400
+    if not selected_categories_and_items:
+        return jsonify({"error": "No se han seleccionado categorías o ítems para exportar."}), 400
+
+    task_id = str(uuid.uuid4())
+    original_filename = os.path.basename(filepath)
+    zip_filename = f"{os.path.splitext(original_filename)[0]}_multi_export.zip"
+    output_zip_path = os.path.join(app.config['DOWNLOAD_FOLDER'], zip_filename)
+
+    tasks[task_id] = {'status': 'processing', 'progress': 0}
+
+    thread = threading.Thread(target=multi_export_process_task, args=(task_id, filepath, selected_categories_and_items, output_zip_path))
+    thread.start()
+
+    return jsonify({'task_id': task_id})
 
 
 # --- Bloque Principal ---

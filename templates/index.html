@@ -80,26 +80,46 @@
 
         <div id="multi-export-tab" class="tab-content">
             <div id="multi-export-container">
-                <p>Sube tu base de datos para generar automáticamente un archivo CSV por cada banco y tarjeta para tus campañas de Ads.</p>
+                <p>Sube tu base de datos para generar automáticamente un archivo CSV por cada banco, tarjeta, cobrand o partner para tus campañas de Ads.</p>
 
                 <form id="multi-upload-form" class="form-group">
                     <div class="form-group">
-                        <label for="multi-csv-file" class="file-upload-label">
-                            <img src="/static/img/base-de-datos.png" alt="Icono de base de datos" width="50">
+                        <label for="multi-csv-file" class="file-upload-label" id="multi-file-upload-label">
+                            <img src="{{ url_for('static', filename='img/base-de-datos.png') }}" alt="Icono de base de datos" width="50">
                             <p id="multi-upload-instruction-text">Arrastra y suelta tu archivo .csv o haz clic aquí</p>
                             <p id="multi-file-name"></p>
                         </label>
                         <input type="file" id="multi-csv-file" accept=".csv">
                     </div>
+                    <button type="button" id="multi-upload-btn" class="btn" disabled>Subir Archivo</button>
                 </form>
 
+                <div id="multi-upload-progress-section" class="hidden">
+                    <p id="multi-upload-progress-text">Subiendo archivo...</p>
+                    <div class="progress-bar"><div id="multi-upload-progress" class="progress"></div></div>
+                </div>
                 <div id="multi-notification-area" class="notification hidden"></div>
 
-                <div id="multi-progress-section" class="hidden">
-                    <h2>Procesando y generando archivos...</h2>
-                    <p id="multi-progress-text">Iniciando...</p>
+                <!-- Sección para selección de categorías e ítems -->
+                <div id="multi-selection-section" class="hidden">
+                    <h2>Selecciona categorías y elementos a exportar</h2>
+                    <div id="multi-category-selection">
+                        <!-- Checkboxes para categorías se generarán aquí -->
+                    </div>
+                    <div id="multi-item-selection">
+                        <!-- Checkboxes para ítems individuales se generarán aquí -->
+                    </div>
+                    <button type="button" id="multi-start-export-btn" class="btn" disabled>Iniciar Exportación</button>
                 </div>
 
+                <!-- Sección de progreso de procesamiento -->
+                <div id="multi-processing-progress-section" class="hidden">
+                    <h2>Procesando y generando archivos...</h2>
+                    <p id="multi-processing-progress-text">Iniciando...</p>
+                    <div class="progress-bar"><div id="multi-processing-progress" class="progress"></div></div>
+                </div>
+
+                <!-- Sección de descarga -->
                 <div id="multi-download-section" class="hidden">
                     <h2>¡Archivos Generados!</h2>
                     <p>Tus archivos de segmento han sido generados y comprimidos con éxito.</p>

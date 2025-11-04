@@ -1,3 +1,7 @@
+# Roadmap y Avances del Proyecto
+
+Este documento sirve como una hoja de ruta para el desarrollo de la herramienta de limpieza de bases de datos. Aquí se detallan tanto las mejoras planificadas a futuro como un registro cronológico de los avances y cambios implementados en el proyecto.
+
 # Mejoras Propuestas (Roadmap)
 
 A continuación se detallan las mejoras planificadas para futuras versiones de la herramienta, con el objetivo de enriquecer la experiencia de usuario, ampliar la funcionalidad y mejorar la calidad técnica del proyecto.
@@ -122,3 +126,19 @@ A continuación se detallan las mejoras planificadas para futuras versiones de l
     *   Esto sienta las bases para la implementación robusta de la funcionalidad de "Exportación Múltiple por Segmento".
 
 ---
+
+#### 2025-11-04 (Continuación)
+
+
+
+*   **Documentación del Repositorio (`ai_docs`)**:
+
+    *   Se ha formalizado la documentación interna del proyecto en la carpeta `ai_docs`.
+
+    *   **`roadmap.md`**: Se añadió un encabezado y una descripción para clarificar su doble propósito: servir como hoja de ruta de desarrollo y como registro cronológico de avances.
+
+
+
+---
+
+
