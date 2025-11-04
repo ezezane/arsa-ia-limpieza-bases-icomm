@@ -108,6 +108,12 @@ A continuación se detallan las mejoras planificadas para futuras versiones de l
         *   Se ajustó la comunicación con el backend para gestionar el nuevo flujo de trabajo.
     *   Esta funcionalidad aumenta la flexibilidad de la herramienta, permitiendo procesar bases de datos de "actividad" que antes eran incompatibles.
 
+#### 2025-11-03 (Continuación)
+
+*   **Mejoras de UX en Feedback al Usuario**:
+    *   **Conteo de Registros Procesados:** Al finalizar la limpieza, la sección de descarga ahora muestra el número total de registros que se procesaron, dando al usuario una confirmación cuantitativa del trabajo realizado.
+    *   **Mensaje de Advertencia Destacado:** Se mejoró el estilo visual del mensaje que notifica la generación automática de `docnum`. Ahora se muestra con un color de fondo y texto de advertencia para asegurar que el usuario note la acción automática que está tomando el sistema.
+
 
 ---
 

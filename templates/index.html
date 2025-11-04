@@ -23,7 +23,7 @@
             <input type="file" id="csv-file" accept=".csv">
         </form>
 
-        <div id="notification-area" class="notification is-hidden"></div>
+        <div id="notification-area" class="notification hidden"></div>
 
         <!-- Sección para mostrar y seleccionar columnas -->
         <div id="columns-section" class="hidden">
@@ -65,6 +65,7 @@
         <div id="download-section" class="hidden">
             <h2>¡Base Limpia!</h2>
             <p>Tu base de datos ha sido limpiada y normalizada con éxito.</p>
+            <p id="processed-count"></p>
             <a href="#" id="download-link" class="btn">Descargar Base Limpia</a>
         </div>
     </div>

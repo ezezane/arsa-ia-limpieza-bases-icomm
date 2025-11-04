@@ -375,3 +375,18 @@ input[type="file"] {
 .modal-content.info {
     border-left: 5px solid var(--primary-color); /* Azul para información */
 }
+
+/* Notification Styles */
+.notification {
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    margin: 1.5rem 0;
+    text-align: center;
+    border: 1px solid transparent;
+}
+
+.notification.notification-warning {
+    color: #856404;
+    background-color: #fff3cd;
+    border-color: #ffeeba;
+}

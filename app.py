@@ -168,6 +168,7 @@ def process_csv_task(task_id, filepath, selected_columns, needs_docnum_generatio
 
         tasks[task_id]['status'] = 'complete'
         tasks[task_id]['result'] = f'/downloads/{os.path.basename(output_path)}'
+        tasks[task_id]['processed_rows'] = rows_processed
 
     except FileNotFoundError:
         tasks[task_id]['status'] = 'error'

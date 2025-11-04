@@ -39,6 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
             progressText: document.getElementById('progress-text'),
             downloadSection: document.getElementById('download-section'),
             downloadLink: document.getElementById('download-link'),
+            processedCount: document.getElementById('processed-count'), // Para mostrar el total de registros
         },
 
         // --- INITIALIZATION ---
@@ -270,7 +271,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 elements.fileNameDisplay.textContent = file.name;
                 ui.setLoading(elements.fileUploadLabel, 'Cargando...');
-                elements.notificationArea.classList.add('hidden'); // Ocultar notificación
+                elements.notificationArea.classList.add('hidden');
+                elements.notificationArea.classList.remove('notification-warning'); // Limpiar clase
 
                 try {
                     const data = await App.api.getColumns(file);
@@ -279,6 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     if (state.needs_docnum_generation) {
                         elements.notificationArea.textContent = "No se encontró la columna 'docnum'. Se generará extrayendo los datos del campo 'email'. Por favor, revise la previsualización para confirmar el resultado.";
+                        elements.notificationArea.classList.add('notification-warning');
                         elements.notificationArea.classList.remove('hidden');
                     }
 
@@ -376,6 +379,13 @@ document.addEventListener('DOMContentLoaded', () => {
                                 clearInterval(pollInterval);
                                 ui.updateProgress(100, '¡Completado!');
                                 elements.downloadLink.href = progressData.result;
+
+                                if (progressData.processed_rows !== undefined) {
+                                    elements.processedCount.textContent = `Total de registros: ${progressData.processed_rows.toLocaleString('es-AR')}`;
+                                } else {
+                                    elements.processedCount.textContent = '';
+                                }
+
                                 ui.showSection('downloadSection');
                                 ui.showModal('¡Archivo procesado con éxito!', 'success');
                                 ui.resetLoading(elements.processBtn);
