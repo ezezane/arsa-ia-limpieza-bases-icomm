@@ -82,3 +82,52 @@ Para mantener la simplicidad de la interfaz, no se añadirá un switch o botón 
     -   `process_csv_task`: Añadir la misma lógica de creación de `docnum` durante el procesamiento final por chunks.
 -   **`script.js`**:
     -   Añadir la lógica para recibir el indicador desde el backend y mostrar el mensaje de notificación al usuario.
+
+---
+
+## Feature: Exportación Múltiple por Segmento (Bancos y Tarjetas)
+
+### 1. Objetivo
+Crear una nueva funcionalidad que permita al usuario subir una base de datos y generar múltiples archivos CSV, cada uno segmentado por un banco o tarjeta de crédito específico. El objetivo es crear audiencias personalizadas para plataformas de publicidad.
+
+### 2. Lógica de Negocio
+1.  **Entrada:** El usuario sube un archivo CSV que debe contener las columnas `email`, `EMIS_BANCOS` y `EMIS_TARJETAS`.
+2.  **Configuración:** El sistema se basará en dos archivos de configuración para identificar los bancos y tarjetas "conocidos":
+    -   `config/bancos_conocidos.txt`
+    -   `config/tarjetas_conocidas.txt`
+    Cada archivo contendrá una lista de nombres válidos, uno por línea.
+3.  **Procesamiento:**
+    -   El sistema leerá el CSV subido.
+    -   Para cada fila, analizará las columnas `EMIS_BANCOS` y `EMIS_TARJETAS`.
+    -   Los valores en estas columnas están separados por comas (ej: "BBVA,MACRO,GALICIA"). El sistema dividirá estas cadenas en valores individuales.
+    -   Para cada valor individual (banco o tarjeta), verificará si existe en los archivos de configuración.
+    -   Si un valor existe (ej: "BBVA" está en `bancos_conocidos.txt`), el `email` de esa fila se añadirá a una lista para "BBVA".
+    -   Los valores que no estén en los archivos de configuración (incluyendo "OTROS_BANCOS", "OTRAS_TARJETAS") serán ignorados y no se generará un archivo para ellos.
+    -   Un mismo email puede pertenecer a múltiples listas si el cliente tiene varios bancos/tarjetas.
+4.  **Salida:**
+    -   Se generará un archivo CSV por cada banco y tarjeta "conocido" que tenga al menos un email asociado.
+    -   Cada CSV contendrá únicamente una columna: `email`.
+    -   Todos los archivos CSV generados se empaquetarán en un único archivo `.zip` para facilitar la descarga. El nombre del archivo será, por ejemplo, `exportacion_multiple_[timestamp].zip`.
+
+### 3. Interfaz de Usuario y Experiencia (UX)
+-   Se añadirá una nueva sección o pestaña en `index.html` titulada "Exportación Múltiple".
+-   Esta sección tendrá su propio formulario con un campo para subir el archivo y un botón de "Procesar".
+-   La interfaz mostrará notificaciones de estado (subiendo, procesando, completado) y proporcionará el enlace de descarga para el archivo `.zip` final.
+
+### 4. Impacto en el Código
+-   **`process_large_csv.py`**:
+    -   Script independiente para pre-procesar grandes archivos CSV y generar los archivos de configuración (`bancos_conocidos.txt`, `tarjetas_conocidas.txt`, `arplus_cobrand.txt`, `arplus_partners.txt`) con valores únicos y limpios.
+-   **`app.py`**:
+    -   Crear una nueva ruta (`/multi-export`) que manejará la lógica de esta funcionalidad.
+    -   Implementar la lectura de los archivos de configuración.
+    -   Implementar la lógica de procesamiento del CSV, la distribución de emails y la generación de los archivos CSV en memoria.
+    -   Añadir la funcionalidad para crear el archivo `.zip` y enviarlo al cliente.
+-   **`templates/index.html`**:
+    -   Añadir el nuevo bloque de HTML para el formulario de "Exportación Múltiple".
+-   **`static/js/script.js`**:
+    -   Añadir un nuevo `event listener` para el formulario de exportación múltiple que gestione la petición AJAX y la respuesta.
+-   **Nuevos Archivos**:
+    -   `config/bancos_conocidos.txt`
+    -   `config/tarjetas_conocidas.txt`
+    -   `config/arplus_cobrand.txt`
+    -   `config/arplus_partners.txt`

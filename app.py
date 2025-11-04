@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 
 import os
-from flask import Flask, request, render_template, jsonify, send_from_directory
+import zipfile
+import io
+from flask import Flask, request, render_template, jsonify, send_from_directory, send_file
 import pandas as pd
 
 import threading
@@ -278,6 +280,77 @@ def get_progress(task_id):
 def download_file(filename):
     """Sirve los archivos procesados para su descarga."""
     return send_from_directory(app.config['DOWNLOAD_FOLDER'], filename, as_attachment=True)
+
+
+@app.route('/multi-export', methods=['POST'])
+def multi_export():
+    if 'csv_file' not in request.files:
+        return jsonify({"error": "No se ha subido ningún archivo."}), 400
+
+    file = request.files['csv_file']
+    if file.filename == '' or not file.filename.endswith('.csv'):
+        return jsonify({"error": "Archivo no válido. Por favor, sube un archivo .csv."}), 400
+
+    try:
+        # --- Cargar configuración ---
+        with open('config/bancos_conocidos.txt', 'r') as f:
+            known_banks = set(line.strip() for line in f)
+        with open('config/tarjetas_conocidas.txt', 'r') as f:
+            known_cards = set(line.strip() for line in f)
+
+        # --- Leer CSV ---
+        df = pd.read_csv(file, sep=app.config['CSV_SEPARATOR'], usecols=['email', 'EMIS_BANCOS', 'EMIS_TARJETAS'], encoding=get_csv_encoding(file))
+
+        # --- Procesar datos ---
+        data_for_csv = {}
+        for _, row in df.iterrows():
+            email = row['email']
+            if pd.isna(email):
+                continue
+
+            # Procesar bancos
+            if pd.notna(row['EMIS_BANCOS']):
+                banks = str(row['EMIS_BANCOS']).split(',')
+                for bank in banks:
+                    bank = bank.strip()
+                    if bank in known_banks:
+                        if bank not in data_for_csv:
+                            data_for_csv[bank] = []
+                        data_for_csv[bank].append(email)
+            
+            # Procesar tarjetas
+            if pd.notna(row['EMIS_TARJETAS']):
+                cards = str(row['EMIS_TARJETAS']).split(',')
+                for card in cards:
+                    card = card.strip()
+                    if card in known_cards:
+                        if card not in data_for_csv:
+                            data_for_csv[card] = []
+                        data_for_csv[card].append(email)
+
+        # --- Crear ZIP en memoria ---
+        memory_file = io.BytesIO()
+        with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
+            for name, emails in data_for_csv.items():
+                if emails:
+                    output = io.StringIO()
+                    pd.DataFrame(emails, columns=['email']).to_csv(output, index=False)
+                    zf.writestr(f"{name}.csv", output.getvalue())
+        
+        memory_file.seek(0)
+        
+        return send_file(
+            memory_file,
+            download_name='exportacion_multiple.zip',
+            as_attachment=True,
+            mimetype='application/zip'
+        )
+
+    except (FileNotFoundError, KeyError) as e:
+        return jsonify({"error": f"Faltan archivos de configuración o columnas en el CSV. Revisa que existan 'config/bancos_conocidos.txt', 'config/tarjetas_conocidas.txt' y las columnas 'email', 'EMIS_BANCOS', 'EMIS_TARJETAS'. Error: {e}"}), 500
+    except Exception as e:
+        return jsonify({"error": f"Ocurrió un error inesperado: {e}"}), 500
+
 
 # --- Bloque Principal ---
 

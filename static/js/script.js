@@ -40,6 +40,16 @@ document.addEventListener('DOMContentLoaded', () => {
             downloadSection: document.getElementById('download-section'),
             downloadLink: document.getElementById('download-link'),
             processedCount: document.getElementById('processed-count'), // Para mostrar el total de registros
+
+            // --- Elementos para Exportación Múltiple ---
+            multiUploadForm: document.getElementById('multi-upload-form'),
+            multiCsvFileInput: document.getElementById('multi-csv-file'),
+            multiFileNameDisplay: document.getElementById('multi-file-name'),
+            multiNotificationArea: document.getElementById('multi-notification-area'),
+            multiProgressSection: document.getElementById('multi-progress-section'),
+            multiProgressText: document.getElementById('multi-progress-text'),
+            multiDownloadSection: document.getElementById('multi-download-section'),
+            multiDownloadLink: document.getElementById('multi-download-link'),
         },
 
         // --- INITIALIZATION ---
@@ -240,6 +250,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!response.ok) throw new Error(data.error || 'Error al verificar el progreso.');
                 return data;
             },
+
+            async multiExportFile(file) {
+                const formData = new FormData();
+                formData.append('csv_file', file);
+                const response = await fetch('/multi-export', { 
+                    method: 'POST', 
+                    body: formData 
+                });
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Error desconocido en el servidor.');
+                }
+                return response.blob(); // Devuelve el blob del zip
+            },
         },
 
         // --- EVENT HANDLING ---
@@ -256,11 +280,41 @@ document.addEventListener('DOMContentLoaded', () => {
                 elements.backToSelectionBtn.addEventListener('click', () => App.ui.showSection('columnsSection'));
                 elements.closeModalBtn.addEventListener('click', App.ui.hideModal);
                 window.addEventListener('click', (e) => e.target === elements.modal && App.ui.hideModal());
+
+                // Listener para el nuevo formulario de exportación múltiple
+                if (elements.multiCsvFileInput) {
+                    elements.multiCsvFileInput.addEventListener('change', handlers.handleMultiExportFileSelect);
+                }
+
+                // Listener para las pestañas
+                const tabsContainer = document.querySelector('.tabs');
+                if (tabsContainer) {
+                    tabsContainer.addEventListener('click', handlers.handleTabClick);
+                }
             },
         },
 
         // --- EVENT HANDLERS ---
         handlers: {
+            handleTabClick(event) {
+                const target = event.target;
+                if (!target.classList.contains('tab-link')) return;
+
+                const tabId = target.dataset.tab;
+
+                // Ocultar todos los contenidos y desactivar todos los links
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+                document.querySelectorAll('.tab-link').forEach(link => {
+                    link.classList.remove('active');
+                });
+
+                // Mostrar el contenido y activar el link de la pestaña seleccionada
+                document.getElementById(tabId).classList.add('active');
+                target.classList.add('active');
+            },
+
             async handleFileSelect(event) {
                 const file = event.target.files[0];
                 const { elements, ui, state } = App;
@@ -402,6 +456,40 @@ document.addEventListener('DOMContentLoaded', () => {
                     ui.showSection('previewSection');
                     ui.showModal(error.message, 'error');
                     ui.resetLoading(elements.processBtn);
+                }
+            },
+
+            async handleMultiExportFileSelect(event) {
+                const file = event.target.files[0];
+                const { multiFileNameDisplay, multiProgressSection, multiDownloadSection, multiDownloadLink, multiProgressText } = App.elements;
+                const { ui, api } = App;
+
+                if (!file) {
+                    multiFileNameDisplay.textContent = '';
+                    return;
+                }
+
+                multiFileNameDisplay.textContent = file.name;
+                multiProgressSection.classList.remove('hidden');
+                multiDownloadSection.classList.add('hidden');
+                multiProgressText.textContent = 'Subiendo y procesando archivo...';
+
+                try {
+                    const blob = await api.multiExportFile(file);
+                    const url = window.URL.createObjectURL(blob);
+                    multiDownloadLink.href = url;
+                    multiDownloadLink.download = 'exportacion_multiple.zip';
+                    
+                    multiProgressSection.classList.add('hidden');
+                    multiDownloadSection.classList.remove('hidden');
+                    ui.showModal('¡Archivos generados con éxito!', 'success');
+
+                } catch (error) {
+                    multiProgressSection.classList.add('hidden');
+                    ui.showModal(error.message, 'error');
+                } finally {
+                    // Limpiar el input para permitir subir el mismo archivo de nuevo
+                    event.target.value = '';
                 }
             },
         },

@@ -63,7 +63,7 @@ A continuación se detallan las mejoras planificadas para futuras versiones de l
 *   **Corrección de Error de Codificación de Archivos**:
     *   Se solucionó un error crítico que impedía procesar archivos que no estuvieran en codificación `UTF-8`.
     *   **Backend (`app.py`):
-        *   Se modificaron las funciones `get_columns`, `preview_file` y `process_csv_task` para manejar de forma robusta la codificación de los archivos.
+        *   Se modificaron las funciones `get_csv_encoding` para evitar la duplicación de código en la detección de la codificación de archivos.
         *   El sistema ahora intenta leer los archivos CSV con `UTF-8` y, si detecta un `UnicodeDecodeError`, reintenta automáticamente con la codificación `latin-1`. Esto asegura la compatibilidad con una mayor variedad de archivos, especialmente aquellos que contienen caracteres como la 'Ñ'.
 
 #### 2025-11-03 (Continuación)
@@ -114,6 +114,11 @@ A continuación se detallan las mejoras planificadas para futuras versiones de l
     *   **Conteo de Registros Procesados:** Al finalizar la limpieza, la sección de descarga ahora muestra el número total de registros que se procesaron, dando al usuario una confirmación cuantitativa del trabajo realizado.
     *   **Mensaje de Advertencia Destacado:** Se mejoró el estilo visual del mensaje que notifica la generación automática de `docnum`. Ahora se muestra con un color de fondo y texto de advertencia para asegurar que el usuario note la acción automática que está tomando el sistema.
 
+#### 2025-11-04
+
+*   **Mejora en la Generación de Archivos de Configuración para Exportación Múltiple (`process_large_csv.py`)**:
+    *   Se ha refactorizado el script `process_large_csv.py` para asegurar que los archivos de configuración (`bancos_conocidos.txt`, `tarjetas_conocidas.txt`, `arplus_cobrand.txt`, `arplus_partners.txt`) contengan únicamente valores únicos por línea, eliminando duplicados y entradas no deseadas (como "OTROS_BANCOS" o "OTRAS_TARJETAS").
+    *   Se ha extendido la funcionalidad para extraer y procesar valores únicos de las columnas `PLUS_PARTNER_COBRAND` y `PLUS_PARTNER_EMPRESAS`, guardándolos en `config/arplus_cobrand.txt` y `config/arplus_partners.txt` respectivamente.
+    *   Esto sienta las bases para la implementación robusta de la funcionalidad de "Exportación Múltiple por Segmento".
 
 ---
-

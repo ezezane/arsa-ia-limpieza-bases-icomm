@@ -11,62 +11,101 @@
 <body>
     <div class="container">
         <h1>ARSA IA - Limpieza de Bases</h1>
-        <p>Sube tu archivo .csv para limpiar y normalizar la base de datos. La IA se encargará de procesar y limpiar los datos por ti.</p>
 
-        <form id="upload-form" class="form-group">
-            <div class="form-group">
-            <label for="csv-file" class="file-upload-label">
-                <img src="{{ url_for('static', filename='img/base-de-datos.png') }}" alt="Icono de base de datos" width="50">
-                <p id="upload-instruction-text">Arrastra y suelta tu archivo .csv o haz clic aquí</p>
-                <p id="file-name"></p>
-            </label>
-            <input type="file" id="csv-file" accept=".csv">
-        </form>
-
-        <div id="notification-area" class="notification hidden"></div>
-
-        <!-- Sección para mostrar y seleccionar columnas -->
-        <div id="columns-section" class="hidden">
-            <h2>Columnas a limpiar</h2>
-            <input type="search" id="search-columns" class="form-control" placeholder="Buscar columnas...">
-            <button type="button" id="toggle-select-btn" class="btn btn-secondary">Seleccionar Todos</button>
-            <div id="columns-list"></div>
-            <button type="button" id="preview-btn" class="btn">Previsualizar</button>
+        <div class="tabs">
+            <button class="tab-link active" data-tab="limpieza-tab">Limpieza de Base</button>
+            <button class="tab-link" data-tab="multi-export-tab">Exportación Múltiple</button>
         </div>
 
-        <!-- Sección para reordenar columnas (nueva) -->
-        <div id="reorder-section" class="hidden">
-            <h2>Reordenar Columnas Seleccionadas</h2>
-            <p>Arrastra y suelta las columnas para establecer el orden deseado en el archivo final.</p>
-            <div id="reorder-columns-list" class="columns-list-reorder"></div>
-            <button type="button" id="confirm-reorder-btn" class="btn">Confirmar Orden y Previsualizar</button>
-            <button type="button" id="back-to-selection-btn" class="btn btn-secondary">Volver a Selección</button>
-        </div>
+        <div id="limpieza-tab" class="tab-content active">
+            <p>Sube tu archivo .csv para limpiar y normalizar la base de datos. La IA se encargará de procesar y limpiar los datos por ti.</p>
 
-        <!-- Sección de Previsualización -->
-        <div id="preview-section" class="hidden">
-            <h2>Previsualización de Datos</h2>
-            <p>Así se verán las primeras 10 filas de tu archivo limpio. Si estás de acuerdo, puedes continuar.</p>
-            <div id="preview-table-container"></div>
-            <button type="button" id="process-btn" class="btn">Limpiar Base</button>
-            <button type="button" id="back-to-columns-btn" class="btn btn-secondary">Volver a Seleccionar</button>
-        </div>
+            <form id="upload-form" class="form-group">
+                <div class="form-group">
+                <label for="csv-file" class="file-upload-label">
+                    <img src="{{ url_for('static', filename='img/base-de-datos.png') }}" alt="Icono de base de datos" width="50">
+                    <p id="upload-instruction-text">Arrastra y suelta tu archivo .csv o haz clic aquí</p>
+                    <p id="file-name"></p>
+                </label>
+                <input type="file" id="csv-file" accept=".csv">
+                </div>
 
-        <!-- Sección de progreso -->
-        <div id="progress-section" class="hidden">
-            <h2>Limpiando base...</h2>
-            <p id="progress-text">Iniciando...</p>
-            <div class="progress-bar">
-                <div id="progress" class="progress"></div>
+            <div id="notification-area" class="notification hidden"></div>
+
+            <!-- Sección para mostrar y seleccionar columnas -->
+            <div id="columns-section" class="hidden">
+                <h2>Columnas a limpiar</h2>
+                <input type="search" id="search-columns" class="form-control" placeholder="Buscar columnas...">
+                <button type="button" id="toggle-select-btn" class="btn btn-secondary">Seleccionar Todos</button>
+                <div id="columns-list"></div>
+                <button type="button" id="preview-btn" class="btn">Previsualizar</button>
             </div>
+
+            <!-- Sección para reordenar columnas (nueva) -->
+            <div id="reorder-section" class="hidden">
+                <h2>Reordenar Columnas Seleccionadas</h2>
+                <p>Arrastra y suelta las columnas para establecer el orden deseado en el archivo final.</p>
+                <div id="reorder-columns-list" class="columns-list-reorder"></div>
+                <button type="button" id="confirm-reorder-btn" class="btn">Confirmar Orden y Previsualizar</button>
+                <button type="button" id="back-to-selection-btn" class="btn btn-secondary">Volver a Selección</button>
+            </div>
+
+            <!-- Sección de Previsualización -->
+            <div id="preview-section" class="hidden">
+                <h2>Previsualización de Datos</h2>
+                <p>Así se verán las primeras 10 filas de tu archivo limpio. Si estás de acuerdo, puedes continuar.</p>
+                <div id="preview-table-container"></div>
+                <button type="button" id="process-btn" class="btn">Limpiar Base</button>
+                <button type="button" id="back-to-columns-btn" class="btn btn-secondary">Volver a Seleccionar</button>
+            </div>
+
+            <!-- Sección de progreso -->
+            <div id="progress-section" class="hidden">
+                <h2>Limpiando base...</h2>
+                <p id="progress-text">Iniciando...</p>
+                <div class="progress-bar">
+                    <div id="progress" class="progress"></div>
+                </div>
+            </div>
+
+            <!-- Sección de descarga -->
+            <div id="download-section" class="hidden">
+                <h2>¡Base Limpia!</h2>
+                <p>Tu base de datos ha sido limpiada y normalizada con éxito.</p>
+                <p id="processed-count"></p>
+                <a href="#" id="download-link" class="btn">Descargar Base Limpia</a>
+            </div>
+        </form>
         </div>
 
-        <!-- Sección de descarga -->
-        <div id="download-section" class="hidden">
-            <h2>¡Base Limpia!</h2>
-            <p>Tu base de datos ha sido limpiada y normalizada con éxito.</p>
-            <p id="processed-count"></p>
-            <a href="#" id="download-link" class="btn">Descargar Base Limpia</a>
+        <div id="multi-export-tab" class="tab-content">
+            <div id="multi-export-container">
+                <p>Sube tu base de datos para generar automáticamente un archivo CSV por cada banco y tarjeta para tus campañas de Ads.</p>
+
+                <form id="multi-upload-form" class="form-group">
+                    <div class="form-group">
+                        <label for="multi-csv-file" class="file-upload-label">
+                            <img src="/static/img/base-de-datos.png" alt="Icono de base de datos" width="50">
+                            <p id="multi-upload-instruction-text">Arrastra y suelta tu archivo .csv o haz clic aquí</p>
+                            <p id="multi-file-name"></p>
+                        </label>
+                        <input type="file" id="multi-csv-file" accept=".csv">
+                    </div>
+                </form>
+
+                <div id="multi-notification-area" class="notification hidden"></div>
+
+                <div id="multi-progress-section" class="hidden">
+                    <h2>Procesando y generando archivos...</h2>
+                    <p id="multi-progress-text">Iniciando...</p>
+                </div>
+
+                <div id="multi-download-section" class="hidden">
+                    <h2>¡Archivos Generados!</h2>
+                    <p>Tus archivos de segmento han sido generados y comprimidos con éxito.</p>
+                    <a href="#" id="multi-download-link" class="btn">Descargar Archivos (.zip)</a>
+                </div>
+            </div>
         </div>
     </div>
 
