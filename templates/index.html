@@ -98,17 +98,16 @@
                     <p id="multi-upload-progress-text">Subiendo archivo...</p>
                     <div class="progress-bar"><div id="multi-upload-progress" class="progress"></div></div>
                 </div>
+
+                <div id="multi-initial-processing-progress-section" class="hidden">
+                    <p id="multi-initial-processing-progress-text">Procesando archivo...</p>
+                    <div class="progress-bar"><div id="multi-initial-processing-progress" class="progress"></div></div>
+                </div>
                 <div id="multi-notification-area" class="notification hidden"></div>
 
-                <!-- Sección para selección de categorías e ítems -->
                 <div id="multi-selection-section" class="hidden">
                     <h2>Selecciona categorías y elementos a exportar</h2>
-                    <div id="multi-category-selection">
-                        <!-- Checkboxes para categorías se generarán aquí -->
-                    </div>
-                    <div id="multi-item-selection">
-                        <!-- Checkboxes para ítems individuales se generarán aquí -->
-                    </div>
+                    <div id="multi-selection-container"></div>
                     <button type="button" id="multi-start-export-btn" class="btn" disabled>Iniciar Exportación</button>
                 </div>
 

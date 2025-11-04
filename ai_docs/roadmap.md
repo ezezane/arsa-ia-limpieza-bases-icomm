@@ -125,20 +125,21 @@ A continuación se detallan las mejoras planificadas para futuras versiones de l
     *   Se ha extendido la funcionalidad para extraer y procesar valores únicos de las columnas `PLUS_PARTNER_COBRAND` y `PLUS_PARTNER_EMPRESAS`, guardándolos en `config/arplus_cobrand.txt` y `config/arplus_partners.txt` respectivamente.
     *   Esto sienta las bases para la implementación robusta de la funcionalidad de "Exportación Múltiple por Segmento".
 
----
-
 #### 2025-11-04 (Continuación)
 
+*   **Mejoras en la Interfaz de Exportación Múltiple**:
+    *   Se ha mejorado la visualización de las categorías y los ítems en la sección de exportación múltiple. Ahora los ítems se muestran indentados debajo de su categoría correspondiente, mejorando la claridad visual.
+    *   Se ha añadido la funcionalidad de seleccionar/deseleccionar todos los ítems de una categoría al marcar/desmarcar el checkbox de la categoría.
+    *   Se ha corregido un error que hacía que los ítems de una categoría desaparecieran al desmarcar la categoría. Ahora los ítems permanecen visibles, pero deseleccionados.
 
+*   **Doble Barra de Progreso en Exportación Múltiple**:
+    *   Se ha implementado una segunda barra de progreso en la funcionalidad de exportación múltiple para proporcionar un feedback más claro al usuario.
+    *   La primera barra de progreso muestra el estado de la subida del archivo.
+    *   La segunda barra de progreso muestra el estado del procesamiento inicial del archivo en el servidor.
 
 *   **Documentación del Repositorio (`ai_docs`)**:
-
     *   Se ha formalizado la documentación interna del proyecto en la carpeta `ai_docs`.
-
     *   **`roadmap.md`**: Se añadió un encabezado y una descripción para clarificar su doble propósito: servir como hoja de ruta de desarrollo y como registro cronológico de avances.
 
 
-
 ---
-
-

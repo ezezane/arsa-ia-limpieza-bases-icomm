@@ -61,6 +61,9 @@ document.addEventListener('DOMContentLoaded', () => {
             multiUploadProgressSection: document.getElementById('multi-upload-progress-section'), // Nuevo
             multiUploadProgress: document.getElementById('multi-upload-progress'), // Nuevo
             multiUploadProgressText: document.getElementById('multi-upload-progress-text'), // Nuevo
+            multiInitialProcessingProgressSection: document.getElementById('multi-initial-processing-progress-section'),
+            multiInitialProcessingProgress: document.getElementById('multi-initial-processing-progress'),
+            multiInitialProcessingProgressText: document.getElementById('multi-initial-processing-progress-text'),
             multiNotificationArea: document.getElementById('multi-notification-area'),
             multiSelectionSection: document.getElementById('multi-selection-section'), // Nuevo
             multiCategorySelection: document.getElementById('multi-category-selection'), // Nuevo
@@ -230,9 +233,9 @@ document.addEventListener('DOMContentLoaded', () => {
             },
 
             populateMultiExportSelection(uniqueData) {
-                const { multiCategorySelection, multiItemSelection, multiStartExportBtn } = App.elements;
-                multiCategorySelection.innerHTML = '';
-                multiItemSelection.innerHTML = '';
+                const { multiSelectionSection, multiStartExportBtn } = App.elements;
+                const selectionContainer = document.getElementById('multi-selection-container');
+                selectionContainer.innerHTML = '';
                 App.state.multiExportSelectedItems = { bancos: [], tarjetas: [], cobrands: [], partners: [] }; // Reset selections
 
                 const categories = {
@@ -245,7 +248,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 for (const categoryKey in categories) {
                     if (uniqueData[categoryKey] && uniqueData[categoryKey].length > 0) {
                         const categoryDiv = document.createElement('div');
-                        categoryDiv.classList.add('multi-category-item');
+                        categoryDiv.classList.add('multi-category-container');
+
+                        const categoryHeader = document.createElement('div');
+                        categoryHeader.classList.add('multi-category-header');
 
                         const categoryCheckbox = document.createElement('input');
                         categoryCheckbox.type = 'checkbox';
@@ -257,13 +263,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         categoryLabel.htmlFor = `category-${categoryKey}`;
                         categoryLabel.textContent = categories[categoryKey];
 
-                        categoryDiv.appendChild(categoryCheckbox);
-                        categoryDiv.appendChild(categoryLabel);
-                        multiCategorySelection.appendChild(categoryDiv);
+                        categoryHeader.appendChild(categoryCheckbox);
+                        categoryHeader.appendChild(categoryLabel);
+                        categoryDiv.appendChild(categoryHeader);
 
                         const itemsDiv = document.createElement('div');
                         itemsDiv.id = `items-${categoryKey}`;
-                        itemsDiv.classList.add('multi-item-list', 'hidden'); // Hidden by default
+                        itemsDiv.classList.add('multi-item-list');
                         
                         uniqueData[categoryKey].forEach(item => {
                             const itemCheckbox = document.createElement('input');
@@ -283,7 +289,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             itemDiv.appendChild(itemLabel);
                             itemsDiv.appendChild(itemDiv);
                         });
-                        multiItemSelection.appendChild(itemsDiv);
+                        categoryDiv.appendChild(itemsDiv);
+                        selectionContainer.appendChild(categoryDiv);
                     }
                 }
                 multiStartExportBtn.disabled = true; // Initially disabled
@@ -347,16 +354,43 @@ document.addEventListener('DOMContentLoaded', () => {
             },
 
             // --- Nuevas funciones para Exportación Múltiple ---
-            async multiExportInitialProcess(file) {
-                const formData = new FormData();
-                formData.append('csv_file', file);
-                const response = await fetch('/api/multi-export-initial-process', {
-                    method: 'POST',
-                    body: formData
+            async multiExportInitialProcess(file, progressCallback) {
+                return new Promise((resolve, reject) => {
+                    const formData = new FormData();
+                    formData.append('csv_file', file);
+
+                    const xhr = new XMLHttpRequest();
+
+                    xhr.open('POST', '/api/multi-export-initial-process', true);
+
+                    xhr.upload.onprogress = (event) => {
+                        if (event.lengthComputable) {
+                            const progress = Math.round((event.loaded / event.total) * 100);
+                            if (progressCallback) {
+                                progressCallback(progress);
+                            }
+                        }
+                    };
+
+                    xhr.onload = () => {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            resolve(JSON.parse(xhr.responseText));
+                        } else {
+                            try {
+                                const data = JSON.parse(xhr.responseText);
+                                reject(new Error(data.error || 'Error en el procesamiento inicial de exportación múltiple.'));
+                            } catch (e) {
+                                reject(new Error('Error en el procesamiento inicial de exportación múltiple.'));
+                            }
+                        }
+                    };
+
+                    xhr.onerror = () => {
+                        reject(new Error('Error de red al intentar procesar el archivo.'));
+                    };
+
+                    xhr.send(formData);
                 });
-                const data = await response.json();
-                if (!response.ok) throw new Error(data.error || 'Error en el procesamiento inicial de exportación múltiple.');
-                return data;
             },
 
             async multiExportProcess(filepath, selectedItems) {
@@ -464,7 +498,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                       .filter(cb => !cb.id.toLowerCase().startsWith('icommkt'));
                 const allSelected = checkboxes.every(cb => cb.checked);
                 checkboxes.forEach(cb => cb.checked = !allSelected);
-                toggleSelectBtn.textContent = allSelected ? 'Seleccionar Todos' : 'Deseleccionar Todo';
+                toggleSelectBtn.textContent = allSelected ? 'Deseleccionar Todo' : 'Seleccionar Todos';
             },
 
             handleSearch(event) {
@@ -605,35 +639,79 @@ document.addEventListener('DOMContentLoaded', () => {
                 elements.multiUploadProgress.textContent = '0%';
 
                 try {
-                    const data = await api.multiExportInitialProcess(file);
-                    state.multiExportFilepath = data.filepath;
-                    state.multiExportUniqueData = data.unique_data;
+                    const data = await api.multiExportInitialProcess(file, (progress) => {
+                        elements.multiUploadProgress.style.width = `${progress}%`;
+                        elements.multiUploadProgress.textContent = `${progress}%`;
+                        elements.multiUploadProgressText.textContent = `Subiendo archivo... (${progress}%)`;
+                    });
+                    ui.showModal('Archivo subido. Procesando datos iniciales...', 'info');
 
-                    ui.showModal('Archivo subido y datos iniciales procesados.', 'success');
-                    ui.populateMultiExportSelection(data.unique_data);
-                    ui.showSection('multiSelectionSection'); // Show selection section
+                    // Show initial processing progress bar
+                    elements.multiUploadProgressSection.classList.add('hidden');
+                    elements.multiInitialProcessingProgressSection.classList.remove('hidden');
+                    elements.multiInitialProcessingProgress.style.width = '0%';
+                    elements.multiInitialProcessingProgress.textContent = '0%';
+                    elements.multiInitialProcessingProgressText.textContent = 'Procesando archivo...';
+
+                    const pollInterval = setInterval(async () => {
+                        try {
+                            const progressData = await api.checkProgress(data.task_id);
+                            if (progressData.status === 'processing') {
+                                const progress = progressData.progress || 0;
+                                elements.multiInitialProcessingProgress.style.width = `${progress}%`;
+                                elements.multiInitialProcessingProgress.textContent = `${progress}%`;
+                                elements.multiInitialProcessingProgressText.textContent = `Procesando archivo... (${progress}%)`;
+                            } else if (progressData.status === 'complete') {
+                                clearInterval(pollInterval);
+                                elements.multiInitialProcessingProgress.style.width = '100%';
+                                elements.multiInitialProcessingProgress.textContent = '100%';
+                                elements.multiInitialProcessingProgressText.textContent = '¡Procesamiento completado!';
+
+                                state.multiExportFilepath = progressData.result.filepath;
+                                state.multiExportUniqueData = progressData.result.unique_data;
+
+                                ui.populateMultiExportSelection(progressData.result.unique_data);
+                                ui.showSection('multiSelectionSection');
+                                ui.showModal('Datos iniciales procesados con éxito.', 'success');
+
+                                setTimeout(() => {
+                                    elements.multiInitialProcessingProgressSection.classList.add('hidden');
+                                }, 2000);
+                            } else if (progressData.status === 'error') {
+                                clearInterval(pollInterval);
+                                throw new Error(progressData.error);
+                            }
+                        } catch (pollError) {
+                            clearInterval(pollInterval);
+                            throw pollError;
+                        }
+                    }, 2000);
                 } catch (error) {
                     ui.showModal(error.message, 'error');
                     App.ui.showSection(null); // Hide all sections on error
                 } finally {
                     ui.resetLoading(elements.multiUploadBtn);
-                    elements.multiUploadProgressSection.classList.add('hidden'); // Hide upload progress
                 }
             },
 
             handleMultiCategoryChange(event) {
                 const categoryKey = event.target.value;
                 const itemsDiv = document.getElementById(`items-${categoryKey}`);
+                const checkboxes = itemsDiv.querySelectorAll('input[type="checkbox"]');
+                
                 if (event.target.checked) {
                     itemsDiv.classList.remove('hidden');
-                } else {
-                    itemsDiv.classList.add('hidden');
-                    // Deselect all items in this category if category is unchecked
-                    Array.from(itemsDiv.querySelectorAll('input[type="checkbox"]')).forEach(cb => {
-                        cb.checked = false;
-                        const itemValue = cb.value;
-                        App.state.multiExportSelectedItems[categoryKey] = App.state.multiExportSelectedItems[categoryKey].filter(item => item !== itemValue);
+                    checkboxes.forEach(cb => {
+                        cb.checked = true;
+                        if (!App.state.multiExportSelectedItems[categoryKey].includes(cb.value)) {
+                            App.state.multiExportSelectedItems[categoryKey].push(cb.value);
+                        }
                     });
+                } else {
+                    checkboxes.forEach(cb => {
+                        cb.checked = false;
+                    });
+                    App.state.multiExportSelectedItems[categoryKey] = [];
                 }
                 App.handlers.updateMultiExportStartButtonState();
             },

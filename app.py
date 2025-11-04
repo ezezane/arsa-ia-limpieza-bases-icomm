@@ -295,6 +295,21 @@ def multi_export_initial_process():
     try:
         file.save(temp_filepath)
 
+        task_id = str(uuid.uuid4())
+        tasks[task_id] = {'status': 'processing', 'progress': 0}
+
+        thread = threading.Thread(target=multi_export_initial_process_task, args=(task_id, temp_filepath))
+        thread.start()
+
+        return jsonify({'task_id': task_id})
+
+    except Exception as e:
+        if os.path.exists(temp_filepath):
+            os.remove(temp_filepath)
+        return jsonify({"error": f"Ocurrió un error inesperado al iniciar el procesamiento: {e}"}), 500
+
+def multi_export_initial_process_task(task_id, temp_filepath):
+    try:
         encoding = get_csv_encoding(temp_filepath)
         try:
             df = pd.read_csv(temp_filepath, sep=app.config['CSV_SEPARATOR'], encoding=encoding)
@@ -307,39 +322,40 @@ def multi_export_initial_process():
         all_cobrands = set()
         all_partners = set()
 
-        if 'EMIS_BANCOS' in df.columns:
-            for item_str in df['EMIS_BANCOS'].dropna().unique():
-                if isinstance(item_str, str):
-                    for item in item_str.split(','):
-                        cleaned_item = item.strip()
-                        if cleaned_item and cleaned_item != 'OTROS_BANCOS':
-                            all_banks.add(cleaned_item)
+        total_rows = len(df)
+        processed_rows = 0
 
-        if 'EMIS_TARJETAS' in df.columns:
-            for item_str in df['EMIS_TARJETAS'].dropna().unique():
-                if isinstance(item_str, str):
-                    for item in item_str.split(','):
-                        cleaned_item = item.strip()
-                        if cleaned_item and cleaned_item != 'OTRAS_TARJETAS':
-                            all_cards.add(cleaned_item)
+        for index, row in df.iterrows():
+            if 'EMIS_BANCOS' in df.columns and pd.notna(row['EMIS_BANCOS']):
+                for item in str(row['EMIS_BANCOS']).split(','):
+                    cleaned_item = item.strip()
+                    if cleaned_item and cleaned_item != 'OTROS_BANCOS':
+                        all_banks.add(cleaned_item)
 
-        if 'PLUS_PARTNER_COBRAND' in df.columns:
-            for item_str in df['PLUS_PARTNER_COBRAND'].dropna().unique():
-                if isinstance(item_str, str):
-                    for item in item_str.split(','):
-                        cleaned_item = item.strip()
-                        if cleaned_item:
-                            all_cobrands.add(cleaned_item)
+            if 'EMIS_TARJETAS' in df.columns and pd.notna(row['EMIS_TARJETAS']):
+                for item in str(row['EMIS_TARJETAS']).split(','):
+                    cleaned_item = item.strip()
+                    if cleaned_item and cleaned_item != 'OTRAS_TARJETAS':
+                        all_cards.add(cleaned_item)
 
-        if 'PLUS_PARTNER_EMPRESAS' in df.columns:
-            for item_str in df['PLUS_PARTNER_EMPRESAS'].dropna().unique():
-                if isinstance(item_str, str):
-                    for item in item_str.split(','):
-                        cleaned_item = item.strip()
-                        if cleaned_item:
-                            all_partners.add(cleaned_item)
+            if 'PLUS_PARTNER_COBRAND' in df.columns and pd.notna(row['PLUS_PARTNER_COBRAND']):
+                for item in str(row['PLUS_PARTNER_COBRAND']).split(','):
+                    cleaned_item = item.strip()
+                    if cleaned_item:
+                        all_cobrands.add(cleaned_item)
 
-        return jsonify({
+            if 'PLUS_PARTNER_EMPRESAS' in df.columns and pd.notna(row['PLUS_PARTNER_EMPRESAS']):
+                for item in str(row['PLUS_PARTNER_EMPRESAS']).split(','):
+                    cleaned_item = item.strip()
+                    if cleaned_item:
+                        all_partners.add(cleaned_item)
+            
+            processed_rows += 1
+            progress = (processed_rows / total_rows) * 100
+            tasks[task_id]['progress'] = round(progress)
+
+        tasks[task_id]['status'] = 'complete'
+        tasks[task_id]['result'] = {
             "filepath": temp_filepath,
             "unique_data": {
                 "bancos": sorted(list(all_banks)),
@@ -347,16 +363,15 @@ def multi_export_initial_process():
                 "cobrands": sorted(list(all_cobrands)),
                 "partners": sorted(list(all_partners))
             }
-        })
+        }
 
     except UnicodeDecodeError:
-        if os.path.exists(temp_filepath):
-            os.remove(temp_filepath)
-        return jsonify({"error": "Error de codificación: El archivo no pudo ser leído correctamente. Asegúrate de que esté en formato UTF-8 o Latin-1."}), 400
+        tasks[task_id]['status'] = 'error'
+        tasks[task_id]['error'] = "Error de codificación: El archivo no pudo ser leído correctamente. Asegúrate de que esté en formato UTF-8 o Latin-1."
     except Exception as e:
-        if os.path.exists(temp_filepath):
-            os.remove(temp_filepath)
-        return jsonify({"error": f"Ocurrió un error inesperado durante el procesamiento inicial: {e}"}), 500
+        tasks[task_id]['status'] = 'error'
+        tasks[task_id]['error'] = f"Ocurrió un error inesperado durante el procesamiento inicial: {e}"
+
 
 def multi_export_process_task(task_id, filepath, selected_categories_and_items, output_zip_path):
     try:

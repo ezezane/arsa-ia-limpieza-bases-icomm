@@ -426,3 +426,24 @@ input[type="file"] {
 div.tab-content.active {
     display: block;
 }
+
+.multi-category-container {
+    margin-bottom: 1.5rem;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 1rem;
+}
+
+.multi-category-header {
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+.multi-item-list {
+    padding-left: 2rem;
+}
+
+.multi-item-checkbox {
+    display: block;
+    margin-bottom: 0.5rem;
+}

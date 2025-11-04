@@ -131,3 +131,22 @@ Crear una nueva funcionalidad que permita al usuario subir una base de datos y g
     -   `config/tarjetas_conocidas.txt`
     -   `config/arplus_cobrand.txt`
     -   `config/arplus_partners.txt`
+
+
+### 2025-11-04: Mejoras en la Interfaz de Exportación Múltiple
+
+*   **Prompt:** "La barra de carga en la exportación múltiple no funciona. Además, la selección de categorías es confusa y visualmente poco atractiva."
+*   **Respuesta de Gemini:**
+    *   **Frontend (`script.js`):**
+        *   Se reemplazó `fetch` con `XMLHttpRequest` para implementar una barra de progreso de subida de archivos funcional.
+        *   Se añadió una segunda barra de progreso para el procesamiento inicial del archivo en el servidor, utilizando un sistema de sondeo (`polling`) con `task_id`.
+        *   Se rediseñó la sección de selección de categorías para mostrar una estructura jerárquica con ítems indentados.
+        *   Se implementó la lógica para seleccionar/deseleccionar todos los ítems de una categoría.
+        *   Se corrigió un error que ocultaba los ítems al desmarcar una categoría.
+    *   **Backend (`app.py`):**
+        *   Se modificó el endpoint de exportación múltiple para que se ejecute en segundo plano y devuelva un `task_id`.
+        *   Se creó una nueva función de tarea en segundo plano para procesar el archivo inicial y actualizar el progreso.
+        *   Se corrigió un error de sintaxis (`SyntaxError`) introducido durante la refactorización.
+        *   Se mejoró la lógica de actualización del progreso para que sea más granular (basada en filas en lugar de columnas).
+    *   **CSS (`style.css`):
+        *   Se añadieron estilos para la indentación y el espaciado de las categorías y los ítems.
