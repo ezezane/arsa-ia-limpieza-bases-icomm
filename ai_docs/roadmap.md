@@ -13,13 +13,38 @@ A continuación se detallan las mejoras planificadas para futuras versiones de l
 *   **Soporte para Archivos Excel:**
     *   Ampliar la compatibilidad de la herramienta para poder procesar archivos en formato `.xlsx` y `.xls`, además de `.csv`.
 
+### Versión 1.3: Funcionalidad Avanzada de Limpieza
+
+*   **Limpieza de Duplicados y Validación de Emails:**
+    *   Añadir una opción en la interfaz de limpieza principal para que el usuario pueda eliminar filas duplicadas basándose en la columna 'email' o 'docnum'.
+    *   **Para la sección "Exportación Múltiple":** Implementar de forma automática que, después de recopilar todos los correos para cada archivo a generar, se realice un proceso de limpieza final:
+        1.  Se descartarán todos los registros cuyo email no contenga un arroba (`@`).
+        2.  Se eliminarán todos los registros duplicados, asegurando que cada email aparezca solo una vez en el archivo final.
+*   **Validación de Formato de Email (Limpieza Principal):**
+    *   Implementar una opción para identificar y, opcionalmente, descartar o marcar los correos electrónicos que no cumplan con un formato estándar (ej: `usuario@dominio.com`).
+*   **Normalización de Columnas:**
+    *   Permitir al usuario aplicar transformaciones de texto a columnas específicas, como convertir todo a mayúsculas, minúsculas o capitalizar nombres propios.
+
+### Versión 1.4: Mejoras de Experiencia de Usuario (UX)
+
+*   **Modo Oscuro (Dark Mode):**
+    *   Añadir un interruptor en la interfaz para cambiar entre un tema claro y uno oscuro, mejorando la comodidad visual.
+*   **Gestión de Entidades en la UI:**
+    *   Para la exportación múltiple, permitir al usuario añadir temporalmente bancos, tarjetas, etc., para la sesión actual desde la propia interfaz, sin modificar los archivos de configuración base.
+*   **Historial de Descargas:**
+    *   Crear una sección en la interfaz que muestre los últimos archivos generados, con un enlace para volver a descargarlos sin tener que repetir el proceso.
 
 ### Versión 2.0: Mejoras Técnicas y de Mantenimiento
 
 *   **Contenerización con Docker:**
     *   Crear un `Dockerfile` y la configuración necesaria para empaquetar la aplicación, simplificando el despliegue y asegurando la consistencia del entorno.
 
+### Versión 2.1: Calidad y Escalabilidad Técnica
 
+*   **Implementación de Pruebas Unitarias (Testing):**
+    *   Crear un conjunto de pruebas automatizadas para el backend (`app.py`) para verificar la lógica de negocio (limpieza, procesamiento, exportación) y prevenir regresiones.
+*   **Sistema de Logging Avanzado:**
+    *   Configurar un sistema de registro (logging) en el backend que guarde los eventos importantes y errores en un archivo, facilitando el diagnóstico y la depuración.
 
 # --------------------------------------------------------------------------------------------------------------------------------------------------
 
