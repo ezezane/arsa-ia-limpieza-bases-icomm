@@ -94,7 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 modal.classList.add('active');
 
                 if (autoHide && (type === 'success' || type === 'info')) {
-                    App.state.modalTimeout = setTimeout(() => modal.classList.remove('active'), 3000);
+                    App.state.modalTimeout = setTimeout(() => modal.classList.remove('active'), 1000);
                 }
             },
 

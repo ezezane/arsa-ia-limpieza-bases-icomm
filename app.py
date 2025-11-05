@@ -8,6 +8,7 @@ import pandas as pd
 
 import threading
 import uuid
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -429,9 +430,10 @@ def multi_export_process_task(task_id, filepath, selected_categories_and_items, 
                 for bank in banks:
                     bank = bank.strip()
                     if bank in known_banks and bank in selected_categories_and_items['bancos']:
-                        if bank not in data_for_csv:
-                            data_for_csv[f"banco_{bank}"] = []
-                        data_for_csv[f"banco_{bank}"].append(email)
+                        key = f"banco_{bank}"
+                        if key not in data_for_csv:
+                            data_for_csv[key] = []
+                        data_for_csv[key].append(email)
             
             # Procesar tarjetas
             if 'tarjetas' in selected_categories_and_items and pd.notna(row.get('EMIS_TARJETAS')):
@@ -439,9 +441,10 @@ def multi_export_process_task(task_id, filepath, selected_categories_and_items, 
                 for card in cards:
                     card = card.strip()
                     if card in known_cards and card in selected_categories_and_items['tarjetas']:
-                        if card not in data_for_csv:
-                            data_for_csv[f"tarjeta_{card}"] = []
-                        data_for_csv[f"tarjeta_{card}"].append(email)
+                        key = f"tarjeta_{card}"
+                        if key not in data_for_csv:
+                            data_for_csv[key] = []
+                        data_for_csv[key].append(email)
 
             # Procesar cobrands
             if 'cobrands' in selected_categories_and_items and pd.notna(row.get('PLUS_PARTNER_COBRAND')):
@@ -449,9 +452,10 @@ def multi_export_process_task(task_id, filepath, selected_categories_and_items, 
                 for cobrand in cobrands:
                     cobrand = cobrand.strip()
                     if cobrand in known_cobrands and cobrand in selected_categories_and_items['cobrands']:
-                        if cobrand not in data_for_csv:
-                            data_for_csv[f"cobrand_{cobrand}"] = []
-                        data_for_csv[f"cobrand_{cobrand}"].append(email)
+                        key = f"cobrand_{cobrand}"
+                        if key not in data_for_csv:
+                            data_for_csv[key] = []
+                        data_for_csv[key].append(email)
 
             # Procesar partners
             if 'partners' in selected_categories_and_items and pd.notna(row.get('PLUS_PARTNER_EMPRESAS')):
@@ -459,9 +463,10 @@ def multi_export_process_task(task_id, filepath, selected_categories_and_items, 
                 for partner in partners:
                     partner = partner.strip()
                     if partner in known_partners and partner in selected_categories_and_items['partners']:
-                        if partner not in data_for_csv:
-                            data_for_csv[f"partner_{partner}"] = []
-                        data_for_csv[f"partner_{partner}"].append(email)
+                        key = f"partner_{partner}"
+                        if key not in data_for_csv:
+                            data_for_csv[key] = []
+                        data_for_csv[key].append(email)
             
             processed_rows += 1
             tasks[task_id]['progress'] = round((processed_rows / total_rows) * 100)
@@ -510,8 +515,7 @@ def multi_export_process_request():
         return jsonify({"error": "No se han seleccionado categorías o ítems para exportar."}), 400
 
     task_id = str(uuid.uuid4())
-    original_filename = os.path.basename(filepath)
-    zip_filename = f"{os.path.splitext(original_filename)[0]}_multi_export.zip"
+    zip_filename = f"exportacion_multiple_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
     output_zip_path = os.path.join(app.config['DOWNLOAD_FOLDER'], zip_filename)
 
     tasks[task_id] = {'status': 'processing', 'progress': 0}

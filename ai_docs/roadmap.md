@@ -159,4 +159,22 @@ A continuación se detallan las mejoras planificadas para futuras versiones de l
     *   **CSS (`style.css`):
         *   Se añadieron estilos para la indentación y el espaciado de las categorías y los ítems.
 
----
+
+#### 2025-11-04 (Continuación)
+
+*   **Corrección de Bug en Exportación Múltiple**:
+    *   Se solucionó un error crítico en la funcionalidad de exportación múltiple que causaba que solo se exportara una fila por cada archivo CSV generado.
+    *   **Backend (`app.py`):**
+        *   Se corrigió la lógica en la función `multi_export_process_task`. El problema era que no se estaba utilizando la clave correcta para buscar en el diccionario de datos, lo que provocaba que la lista de correos electrónicos se reiniciara con cada nueva fila encontrada en lugar de agregar a la existente.
+        *   La corrección se aplicó a las cuatro categorías de exportación: `bancos`, `tarjetas`, `cobrands` y `partners`.
+
+*   **Mejora en el Nombrado de Archivos de Exportación Múltiple**:
+    *   Se modificó el formato del nombre del archivo ZIP generado en la exportación múltiple para mejorar la trazabilidad.
+    *   **Backend (`app.py`):**
+        *   El nombre del archivo ahora sigue el formato `exportacion_multiple_YYYYMMDD_HHMMSS.zip`, utilizando un timestamp del momento de la generación.
+        *   Se importó el módulo `datetime` para esta funcionalidad.
+
+*   **Ajuste en la Duración de Notificaciones**:
+    *   Se redujo el tiempo de visualización de los modales de notificación para hacer la interfaz más ágil.
+    *   **Frontend (`script.js`):**
+        *   Se modificó el temporizador en la función `showModal` de 3000ms a 1000ms (1 segundo) para las notificaciones de tipo `success` e `info`.
