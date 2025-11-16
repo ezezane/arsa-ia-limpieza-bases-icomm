@@ -216,3 +216,8 @@ A continuación se detallan las mejoras planificadas para futuras versiones de l
     *   Se ha añadido un botón "Empezar de Nuevo" en la interfaz principal, debajo del botón de descarga.
     *   **Frontend (`script.js`):** Se implementó la lógica para que el botón reinicie la interfaz a su estado inicial, limpiando la selección de archivos, ocultando las secciones de previsualización y descarga, y restableciendo los campos del formulario.
     *   **CSS (`style.css`):** Se añadieron estilos para el nuevo botón, utilizando un color distintivo (rojo/naranja) para diferenciarlo de la acción principal de descarga.
+
+*   **Corrección de Bug en Botón de Reset**:
+    *   Se solucionó un problema posterior a la implementación donde el nombre del archivo no se borraba de la interfaz al usar el botón de reseteo.
+    *   **Causa:** La referencia del script al elemento que muestra el nombre del archivo se invalidaba después de la carga inicial del archivo.
+    *   **Solución (`script.js`):** Se ajustó la lógica de carga de archivos para re-establecer la referencia al elemento, asegurando que el botón de reseteo siempre funcione correctamente.

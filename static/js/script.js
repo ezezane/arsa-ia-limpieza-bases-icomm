@@ -558,6 +558,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     elements.fileNameDisplay.textContent = '';
                 } finally {
                     ui.resetLoading(elements.fileUploadLabel);
+                    // Re-acquire the reference to fileNameDisplay as it's recreated by resetLoading
+                    App.elements.fileNameDisplay = document.getElementById('file-name');
                 }
             },
 
@@ -672,8 +674,8 @@ document.addEventListener('DOMContentLoaded', () => {
             handleReset() {
                 const { elements, ui, state } = App;
         
-                // Resetear el input de archivo
-                elements.csvFileInput.value = '';
+                // Resetear el formulario para limpiar el input de archivo
+                elements.uploadForm.reset();
         
                 // Limpiar el nombre del archivo mostrado
                 elements.fileNameDisplay.textContent = '';
