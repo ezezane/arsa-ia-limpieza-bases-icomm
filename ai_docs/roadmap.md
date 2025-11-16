@@ -203,3 +203,9 @@ A continuación se detallan las mejoras planificadas para futuras versiones de l
     *   Se redujo el tiempo de visualización de los modales de notificación para hacer la interfaz más ágil.
     *   **Frontend (`script.js`):**
         *   Se modificó el temporizador en la función `showModal` de 3000ms a 1000ms (1 segundo) para las notificaciones de tipo `success` e `info`.
+
+#### 2025-11-16
+
+*   **Botón de Preset para "ARPLUS Cumpleaños"**:
+    *   Se ha añadido un botón en la interfaz que permite preseleccionar automáticamente las columnas necesarias para generar el reporte de cumpleaños de ARPLUS.
+    *   **Frontend (`script.js`):** Se añadió la lógica para capturar el nuevo botón y asignarle el manejador de eventos correspondiente.

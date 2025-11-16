@@ -51,6 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
             downloadSection: document.getElementById('download-section'),
             downloadLink: document.getElementById('download-link'),
             processedCount: document.getElementById('processed-count'), // Para mostrar el total de registros
+            arplusCumplePresetBtn: document.getElementById('arplus-cumple-preset-btn'),
 
             // --- Elementos para Exportación Múltiple ---
             multiUploadForm: document.getElementById('multi-upload-form'),
@@ -419,6 +420,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 elements.backToSelectionBtn.addEventListener('click', () => App.ui.showSection('columnsSection'));
                 elements.closeModalBtn.addEventListener('click', App.ui.hideModal);
                 window.addEventListener('click', (e) => e.target === elements.modal && App.ui.hideModal());
+                elements.arplusCumplePresetBtn.addEventListener('click', handlers.handleArplusCumplePreset);
 
                 // Listeners para Exportación Múltiple
                 if (elements.multiCsvFileInput) {
@@ -454,6 +456,71 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Mostrar el contenido y activar el link de la pestaña seleccionada
                 document.getElementById(tabId).classList.add('active');
                 target.classList.add('active');
+            },
+
+            handleArplusCumplePreset() {
+                const { columnsList } = App.elements;
+                const checkboxes = columnsList.querySelectorAll('input[type="checkbox"]');
+            
+                // Uncheck all non-mandatory checkboxes
+                checkboxes.forEach(cb => {
+                    if (!cb.disabled) {
+                        cb.checked = false;
+                    }
+                });
+            
+                // Define the preset columns
+                const presetColumns = [
+                    'PLUS_NRO_SOCIO',
+                    'PLUS_SOCIO_CATEGORIA',
+                    'PLUS_MILLAS_SALDO',
+                    'PLUS_SOCIO_NOMBRE',
+                    'PLUS_SOCIO_APELLIDO',
+                    'PLUS_SOCIO_CUMPLEANIOS_FECHA',
+                    'PLUS_SOCIO_MES_CUMPLEANIO',
+                    'PLUS_SOCIO_MES_CUMPLEANIO_CUPON'
+                ];
+            
+                // Check the preset columns
+                presetColumns.forEach(columnName => {
+                    const checkbox = document.getElementById(columnName);
+                    if (checkbox) {
+                        checkbox.checked = true;
+                    }
+                });
+            
+                // Reorder the columns in the UI
+                const mandatoryColumns = Array.from(checkboxes).filter(cb => cb.disabled).map(cb => cb.value);
+                const finalOrderedColumns = [...mandatoryColumns, ...presetColumns];
+            
+                const columnItems = Array.from(columnsList.children);
+                const finalOrderedElements = [];
+            
+                // Add mandatory columns first
+                mandatoryColumns.forEach(colName => {
+                    const item = columnItems.find(el => el.querySelector('input').value === colName);
+                    if (item) finalOrderedElements.push(item);
+                });
+            
+                // Add preset columns in their specified order
+                presetColumns.forEach(colName => {
+                    const item = columnItems.find(el => el.querySelector('input').value === colName);
+                    if (item) finalOrderedElements.push(item);
+                });
+            
+                // Add the rest of the columns
+                columnItems.forEach(item => {
+                    if (!finalOrderedElements.includes(item)) {
+                        finalOrderedElements.push(item);
+                    }
+                });
+            
+                // Append the reordered elements to the list
+                finalOrderedElements.forEach(element => {
+                    columnsList.appendChild(element);
+                });
+            
+                App.ui.showModal('Preset "ARPLUS Cumple" aplicado.', 'success');
             },
 
             async handleFileSelect(event) {
