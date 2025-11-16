@@ -209,3 +209,10 @@ A continuación se detallan las mejoras planificadas para futuras versiones de l
 *   **Botón de Preset para "ARPLUS Cumpleaños"**:
     *   Se ha añadido un botón en la interfaz que permite preseleccionar automáticamente las columnas necesarias para generar el reporte de cumpleaños de ARPLUS.
     *   **Frontend (`script.js`):** Se añadió la lógica para capturar el nuevo botón y asignarle el manejador de eventos correspondiente.
+
+#### 2025-11-16 (Continuación)
+
+*   **Botón de Reset**:
+    *   Se ha añadido un botón "Empezar de Nuevo" en la interfaz principal, debajo del botón de descarga.
+    *   **Frontend (`script.js`):** Se implementó la lógica para que el botón reinicie la interfaz a su estado inicial, limpiando la selección de archivos, ocultando las secciones de previsualización y descarga, y restableciendo los campos del formulario.
+    *   **CSS (`style.css`):** Se añadieron estilos para el nuevo botón, utilizando un color distintivo (rojo/naranja) para diferenciarlo de la acción principal de descarga.

@@ -52,6 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
             downloadLink: document.getElementById('download-link'),
             processedCount: document.getElementById('processed-count'), // Para mostrar el total de registros
             arplusCumplePresetBtn: document.getElementById('arplus-cumple-preset-btn'),
+            resetBtn: document.getElementById('reset-btn'),
 
             // --- Elementos para Exportación Múltiple ---
             multiUploadForm: document.getElementById('multi-upload-form'),
@@ -421,6 +422,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 elements.closeModalBtn.addEventListener('click', App.ui.hideModal);
                 window.addEventListener('click', (e) => e.target === elements.modal && App.ui.hideModal());
                 elements.arplusCumplePresetBtn.addEventListener('click', handlers.handleArplusCumplePreset);
+                elements.resetBtn.addEventListener('click', handlers.handleReset);
 
                 // Listeners para Exportación Múltiple
                 if (elements.multiCsvFileInput) {
@@ -667,6 +669,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             },
 
+            handleReset() {
+                const { elements, ui, state } = App;
+        
+                // Resetear el input de archivo
+                elements.csvFileInput.value = '';
+        
+                // Limpiar el nombre del archivo mostrado
+                elements.fileNameDisplay.textContent = '';
+        
+                // Ocultar todas las secciones y mostrar el área de carga
+                ui.showSection(null);
+        
+                // Limpiar el área de notificación
+                elements.notificationArea.classList.add('hidden');
+                elements.notificationArea.textContent = '';
+                elements.notificationArea.classList.remove('notification-warning');
+        
+                // Resetear el estado
+                state.originalFilepath = '';
+                state.currentOrderedColumns = [];
+                state.needs_docnum_generation = false;
+        
+                // Mostrar mensaje de éxito
+                ui.showModal('El formulario ha sido reseteado.', 'info');
+            },
+
             // --- Handlers para Exportación Múltiple ---
             handleMultiExportFileSelect(event) {
                 const file = event.target.files[0];
@@ -801,6 +829,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const hasSelections = Object.values(multiExportSelectedItems).some(arr => arr.length > 0);
                 multiStartExportBtn.disabled = !hasSelections;
             },
+
+
 
             async handleMultiStartExport() {
                 const { elements, ui, api, state } = App;

@@ -132,6 +132,15 @@ input[type="file"] {
     color: var(--text-color);
 }
 
+.btn.btn-danger {
+    background-color: #e74c3c; /* Rojo anaranjado */
+    color: white;
+}
+
+.btn.btn-danger:hover {
+    background-color: #c0392b; /* Rojo más oscuro */
+}
+
 .form-control {
     width: 100%;
     padding: 0.75rem 1rem;
