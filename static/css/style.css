@@ -456,3 +456,122 @@ div.tab-content.active {
     display: block;
     margin-bottom: 0.5rem;
 }
+
+/* --- CRM Tab Styles --- */
+
+/* Stats Container */
+.stats-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: center;
+    margin: 1.5rem 0;
+}
+
+.stat-box {
+    background-color: var(--background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem 1.5rem;
+    text-align: center;
+    min-width: 120px;
+    flex: 1;
+}
+
+.stat-box.stat-success {
+    border-color: #2ecc71;
+    background-color: rgba(46, 204, 113, 0.1);
+}
+
+.stat-value {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.stat-box.stat-success .stat-value {
+    color: #2ecc71;
+}
+
+.stat-label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--text-secondary-color);
+    margin-top: 0.25rem;
+}
+
+/* Badge Suggested */
+.badge-suggested {
+    background-color: #2ecc71;
+    color: white;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-left: 0.5rem;
+}
+
+/* Column item with suggested badge */
+.column-item.suggested {
+    border-color: #2ecc71;
+    background-color: rgba(46, 204, 113, 0.1);
+}
+
+/* Email Preview List */
+.email-preview-list {
+    list-style: none;
+    padding: 0;
+    margin: 1rem 0;
+    background-color: var(--background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.email-preview-list li {
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+    font-family: monospace;
+    font-size: 0.9rem;
+    color: var(--text-color);
+}
+
+.email-preview-list li:last-child {
+    border-bottom: none;
+}
+
+/* CRM Columns List */
+#crm-columns-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    margin-top: 1rem;
+    margin-bottom: 1.5rem;
+    max-height: 280px;
+    overflow-y: auto;
+    background-color: var(--background-color);
+    border: 1px solid var(--border-color);
+    padding: 1.5rem;
+    border-radius: 8px;
+}
+
+/* CRM section headings */
+#crm-columns-section h2,
+#crm-preview-section h2,
+#crm-progress-section h2,
+#crm-download-section h2 {
+    text-align: center;
+    color: var(--text-color);
+    font-weight: 600;
+    margin-top: 2.5rem;
+}
+
+#crm-preview-section h3 {
+    text-align: center;
+    color: var(--text-secondary-color);
+    font-weight: 500;
+    font-size: 1rem;
+    margin-top: 1.5rem;
+}

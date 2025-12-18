@@ -18,6 +18,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 cobrands: [],
                 partners: []
             },
+
+            // --- Estado para CRM ---
+            crmFile: null,
+            crmFilepath: '',
+            crmSelectedColumns: [],
+            crmSuggestedColumns: [],
         },
 
         // --- DOM ELEMENTS ---
@@ -76,6 +82,36 @@ document.addEventListener('DOMContentLoaded', () => {
             multiProcessingProgressText: document.getElementById('multi-processing-progress-text'), // Nuevo
             multiDownloadSection: document.getElementById('multi-download-section'),
             multiDownloadLink: document.getElementById('multi-download-link'),
+
+            // --- Elementos para CRM ---
+            crmUploadForm: document.getElementById('crm-upload-form'),
+            crmCsvFileInput: document.getElementById('crm-csv-file'),
+            crmFileUploadLabel: document.getElementById('crm-file-upload-label'),
+            crmFileNameDisplay: document.getElementById('crm-file-name'),
+            crmUploadBtn: document.getElementById('crm-upload-btn'),
+            crmNotificationArea: document.getElementById('crm-notification-area'),
+            crmColumnsSection: document.getElementById('crm-columns-section'),
+            crmColumnsList: document.getElementById('crm-columns-list'),
+            crmPreviewBtn: document.getElementById('crm-preview-btn'),
+            crmBackToUploadBtn: document.getElementById('crm-back-to-upload-btn'),
+            crmPreviewSection: document.getElementById('crm-preview-section'),
+            crmPreviewList: document.getElementById('crm-preview-list'),
+            crmStatTotal: document.getElementById('crm-stat-total'),
+            crmStatUnique: document.getElementById('crm-stat-unique'),
+            crmStatDuplicates: document.getElementById('crm-stat-duplicates'),
+            crmStatInvalid: document.getElementById('crm-stat-invalid'),
+            crmProcessBtn: document.getElementById('crm-process-btn'),
+            crmBackToColumnsBtn: document.getElementById('crm-back-to-columns-btn'),
+            crmProgressSection: document.getElementById('crm-progress-section'),
+            crmProgress: document.getElementById('crm-progress'),
+            crmProgressText: document.getElementById('crm-progress-text'),
+            crmDownloadSection: document.getElementById('crm-download-section'),
+            crmDownloadLink: document.getElementById('crm-download-link'),
+            crmDownloadInvalidLink: document.getElementById('crm-download-invalid-link'),
+            crmFinalUnique: document.getElementById('crm-final-unique'),
+            crmFinalDuplicates: document.getElementById('crm-final-duplicates'),
+            crmFinalInvalid: document.getElementById('crm-final-invalid'),
+            crmResetBtn: document.getElementById('crm-reset-btn'),
         },
 
         // --- INITIALIZATION ---
@@ -272,7 +308,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const itemsDiv = document.createElement('div');
                         itemsDiv.id = `items-${categoryKey}`;
                         itemsDiv.classList.add('multi-item-list');
-                        
+
                         uniqueData[categoryKey].forEach(item => {
                             const itemCheckbox = document.createElement('input');
                             itemCheckbox.type = 'checkbox';
@@ -405,6 +441,38 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!response.ok) throw new Error(data.error || 'Error al iniciar el proceso de exportación múltiple.');
                 return data;
             },
+
+            // --- Funciones API para CRM ---
+            async crmGetColumns(file) {
+                const formData = new FormData();
+                formData.append('csv_file', file);
+                const response = await fetch('/api/crm-get-columns', { method: 'POST', body: formData });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Error al obtener columnas del CRM.');
+                return data;
+            },
+
+            async crmPreview(filepath, columns) {
+                const response = await fetch('/api/crm-preview', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filepath, columns }),
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Error en la previsualización CRM.');
+                return data;
+            },
+
+            async crmProcess(filepath, columns) {
+                const response = await fetch('/api/crm-process', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filepath, columns }),
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Error al iniciar el proceso CRM.');
+                return data;
+            },
         },
 
         // --- EVENT HANDLING ---
@@ -436,6 +504,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (tabsContainer) {
                     tabsContainer.addEventListener('click', handlers.handleTabClick);
                 }
+
+                // Listeners para CRM
+                if (elements.crmCsvFileInput) {
+                    elements.crmCsvFileInput.addEventListener('change', handlers.handleCrmFileSelect);
+                    elements.crmUploadBtn.addEventListener('click', handlers.handleCrmUpload);
+                    elements.crmPreviewBtn.addEventListener('click', handlers.handleCrmPreview);
+                    elements.crmBackToUploadBtn.addEventListener('click', handlers.handleCrmBackToUpload);
+                    elements.crmBackToColumnsBtn.addEventListener('click', handlers.handleCrmBackToColumns);
+                    elements.crmProcessBtn.addEventListener('click', handlers.handleCrmProcess);
+                    elements.crmResetBtn.addEventListener('click', handlers.handleCrmReset);
+                }
             },
         },
 
@@ -463,14 +542,14 @@ document.addEventListener('DOMContentLoaded', () => {
             handleArplusCumplePreset() {
                 const { columnsList } = App.elements;
                 const checkboxes = columnsList.querySelectorAll('input[type="checkbox"]');
-            
+
                 // Uncheck all non-mandatory checkboxes
                 checkboxes.forEach(cb => {
                     if (!cb.disabled) {
                         cb.checked = false;
                     }
                 });
-            
+
                 // Define the preset columns
                 const presetColumns = [
                     'PLUS_NRO_SOCIO',
@@ -482,7 +561,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     'PLUS_SOCIO_MES_CUMPLEANIO',
                     'PLUS_SOCIO_MES_CUMPLEANIO_CUPON'
                 ];
-            
+
                 // Check the preset columns
                 presetColumns.forEach(columnName => {
                     const checkbox = document.getElementById(columnName);
@@ -490,38 +569,38 @@ document.addEventListener('DOMContentLoaded', () => {
                         checkbox.checked = true;
                     }
                 });
-            
+
                 // Reorder the columns in the UI
                 const mandatoryColumns = Array.from(checkboxes).filter(cb => cb.disabled).map(cb => cb.value);
                 const finalOrderedColumns = [...mandatoryColumns, ...presetColumns];
-            
+
                 const columnItems = Array.from(columnsList.children);
                 const finalOrderedElements = [];
-            
+
                 // Add mandatory columns first
                 mandatoryColumns.forEach(colName => {
                     const item = columnItems.find(el => el.querySelector('input').value === colName);
                     if (item) finalOrderedElements.push(item);
                 });
-            
+
                 // Add preset columns in their specified order
                 presetColumns.forEach(colName => {
                     const item = columnItems.find(el => el.querySelector('input').value === colName);
                     if (item) finalOrderedElements.push(item);
                 });
-            
+
                 // Add the rest of the columns
                 columnItems.forEach(item => {
                     if (!finalOrderedElements.includes(item)) {
                         finalOrderedElements.push(item);
                     }
                 });
-            
+
                 // Append the reordered elements to the list
                 finalOrderedElements.forEach(element => {
                     columnsList.appendChild(element);
                 });
-            
+
                 App.ui.showModal('Preset "ARPLUS Cumple" aplicado.', 'success');
             },
 
@@ -566,7 +645,7 @@ document.addEventListener('DOMContentLoaded', () => {
             handleToggleSelect() {
                 const { columnsList, toggleSelectBtn } = App.elements;
                 let checkboxes = Array.from(columnsList.querySelectorAll('input[type="checkbox"]:not(:disabled)'))
-                                      .filter(cb => !cb.id.toLowerCase().startsWith('icommkt'));
+                    .filter(cb => !cb.id.toLowerCase().startsWith('icommkt'));
                 const allSelected = checkboxes.every(cb => cb.checked);
                 checkboxes.forEach(cb => cb.checked = !allSelected);
                 toggleSelectBtn.textContent = allSelected ? 'Deseleccionar Todo' : 'Seleccionar Todos';
@@ -673,26 +752,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
             handleReset() {
                 const { elements, ui, state } = App;
-        
+
                 // Resetear el formulario para limpiar el input de archivo
                 elements.uploadForm.reset();
-        
+
                 // Limpiar el nombre del archivo mostrado
                 elements.fileNameDisplay.textContent = '';
-        
+
                 // Ocultar todas las secciones y mostrar el área de carga
                 ui.showSection(null);
-        
+
                 // Limpiar el área de notificación
                 elements.notificationArea.classList.add('hidden');
                 elements.notificationArea.textContent = '';
                 elements.notificationArea.classList.remove('notification-warning');
-        
+
                 // Resetear el estado
                 state.originalFilepath = '';
                 state.currentOrderedColumns = [];
                 state.needs_docnum_generation = false;
-        
+
                 // Mostrar mensaje de éxito
                 ui.showModal('El formulario ha sido reseteado.', 'info');
             },
@@ -795,7 +874,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const categoryKey = event.target.value;
                 const itemsDiv = document.getElementById(`items-${categoryKey}`);
                 const checkboxes = itemsDiv.querySelectorAll('input[type="checkbox"]');
-                
+
                 if (event.target.checked) {
                     itemsDiv.classList.remove('hidden');
                     checkboxes.forEach(cb => {
@@ -882,6 +961,282 @@ document.addEventListener('DOMContentLoaded', () => {
                     ui.showModal(error.message, 'error');
                     ui.resetLoading(elements.multiStartExportBtn);
                 }
+            },
+
+            // --- Handlers para CRM ---
+            handleCrmFileSelect(event) {
+                const file = event.target.files[0];
+                const { elements, state } = App;
+
+                state.crmFile = file;
+
+                if (file) {
+                    elements.crmFileNameDisplay.textContent = file.name;
+                    elements.crmUploadBtn.disabled = false;
+                } else {
+                    elements.crmFileNameDisplay.textContent = '';
+                    elements.crmUploadBtn.disabled = true;
+                }
+                // Reset UI for CRM
+                elements.crmColumnsSection.classList.add('hidden');
+                elements.crmPreviewSection.classList.add('hidden');
+                elements.crmProgressSection.classList.add('hidden');
+                elements.crmDownloadSection.classList.add('hidden');
+                elements.crmNotificationArea.classList.add('hidden');
+            },
+
+            async handleCrmUpload() {
+                const { elements, ui, api, state } = App;
+                const file = state.crmFile;
+
+                if (!file) {
+                    ui.showModal('Por favor, seleccioná un archivo CSV para subir.', 'error');
+                    return;
+                }
+
+                ui.setLoading(elements.crmUploadBtn, 'Cargando...');
+
+                try {
+                    const data = await api.crmGetColumns(file);
+                    state.crmFilepath = data.filepath;
+                    state.crmSuggestedColumns = data.suggested_columns;
+                    state.crmSelectedColumns = [...data.suggested_columns]; // Pre-select suggested
+
+                    // Populate columns list
+                    App.handlers.populateCrmColumnsList(data.columns, data.suggested_columns);
+
+                    elements.crmColumnsSection.classList.remove('hidden');
+                    elements.crmUploadForm.classList.add('hidden');
+
+                    if (data.suggested_columns.length > 0) {
+                        ui.showModal(`Se detectaron ${data.suggested_columns.length} columna(s) de email.`, 'success');
+                    } else {
+                        ui.showModal('No se detectaron columnas de email automáticamente. Por favor, seleccioná las columnas que contienen emails.', 'info', false);
+                    }
+                } catch (error) {
+                    ui.showModal(error.message, 'error');
+                } finally {
+                    ui.resetLoading(elements.crmUploadBtn);
+                }
+            },
+
+            populateCrmColumnsList(columns, suggestedColumns) {
+                const { crmColumnsList, crmPreviewBtn } = App.elements;
+                crmColumnsList.innerHTML = '';
+
+                // Ordenar columnas: sugeridas primero, luego el resto alfabéticamente
+                const sortedColumns = [...columns].sort((a, b) => {
+                    const aIsSuggested = suggestedColumns.includes(a);
+                    const bIsSuggested = suggestedColumns.includes(b);
+
+                    if (aIsSuggested && !bIsSuggested) return -1;
+                    if (!aIsSuggested && bIsSuggested) return 1;
+                    return a.localeCompare(b);
+                });
+
+                sortedColumns.forEach(column => {
+                    const item = document.createElement('div');
+                    item.classList.add('column-item');
+
+                    const isSuggested = suggestedColumns.includes(column);
+                    if (isSuggested) {
+                        item.classList.add('suggested');
+                    }
+
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.id = `crm-col-${column}`;
+                    checkbox.value = column;
+                    checkbox.checked = isSuggested;
+                    checkbox.addEventListener('change', App.handlers.handleCrmColumnChange);
+
+                    const label = document.createElement('label');
+                    label.htmlFor = `crm-col-${column}`;
+                    label.textContent = column;
+
+                    if (isSuggested) {
+                        const badge = document.createElement('span');
+                        badge.classList.add('badge-suggested');
+                        badge.textContent = 'sugerido';
+                        label.appendChild(badge);
+                    }
+
+                    item.appendChild(checkbox);
+                    item.appendChild(label);
+                    crmColumnsList.appendChild(item);
+                });
+
+                // Update preview button state
+                App.handlers.updateCrmPreviewButtonState();
+            },
+
+            handleCrmColumnChange(event) {
+                const { state } = App;
+                const columnValue = event.target.value;
+
+                if (event.target.checked) {
+                    if (!state.crmSelectedColumns.includes(columnValue)) {
+                        state.crmSelectedColumns.push(columnValue);
+                    }
+                } else {
+                    state.crmSelectedColumns = state.crmSelectedColumns.filter(col => col !== columnValue);
+                }
+                App.handlers.updateCrmPreviewButtonState();
+            },
+
+            updateCrmPreviewButtonState() {
+                const { crmPreviewBtn } = App.elements;
+                const { crmSelectedColumns } = App.state;
+                crmPreviewBtn.disabled = crmSelectedColumns.length === 0;
+            },
+
+            async handleCrmPreview() {
+                const { elements, ui, api, state } = App;
+
+                if (state.crmSelectedColumns.length === 0) {
+                    ui.showModal('Por favor, seleccioná al menos una columna de email.', 'error');
+                    return;
+                }
+
+                ui.setLoading(elements.crmPreviewBtn, 'Cargando...');
+
+                try {
+                    const data = await api.crmPreview(state.crmFilepath, state.crmSelectedColumns);
+
+                    // Update preview list
+                    elements.crmPreviewList.innerHTML = '';
+                    data.preview.forEach(email => {
+                        const li = document.createElement('li');
+                        li.textContent = email;
+                        elements.crmPreviewList.appendChild(li);
+                    });
+
+                    // Update stats
+                    elements.crmStatTotal.textContent = data.stats.total_raw.toLocaleString('es-AR');
+                    elements.crmStatUnique.textContent = data.stats.total_unique.toLocaleString('es-AR');
+                    elements.crmStatDuplicates.textContent = data.stats.duplicates.toLocaleString('es-AR');
+                    elements.crmStatInvalid.textContent = data.stats.invalid.toLocaleString('es-AR');
+
+                    elements.crmColumnsSection.classList.add('hidden');
+                    elements.crmPreviewSection.classList.remove('hidden');
+
+                    ui.showModal('Previsualización generada.', 'success');
+                } catch (error) {
+                    ui.showModal(error.message, 'error');
+                } finally {
+                    ui.resetLoading(elements.crmPreviewBtn);
+                }
+            },
+
+            handleCrmBackToUpload() {
+                const { elements, state } = App;
+                elements.crmColumnsSection.classList.add('hidden');
+                elements.crmUploadForm.classList.remove('hidden');
+                state.crmFilepath = '';
+                state.crmSelectedColumns = [];
+                state.crmSuggestedColumns = [];
+            },
+
+            handleCrmBackToColumns() {
+                const { elements } = App;
+                elements.crmPreviewSection.classList.add('hidden');
+                elements.crmColumnsSection.classList.remove('hidden');
+            },
+
+            async handleCrmProcess() {
+                const { elements, ui, api, state } = App;
+
+                if (state.crmSelectedColumns.length === 0) {
+                    ui.showModal('No hay columnas seleccionadas.', 'error');
+                    return;
+                }
+
+                ui.setLoading(elements.crmProcessBtn, 'Procesando...');
+                elements.crmPreviewSection.classList.add('hidden');
+                elements.crmProgressSection.classList.remove('hidden');
+                elements.crmProgress.style.width = '0%';
+                elements.crmProgress.textContent = '0%';
+                elements.crmProgressText.textContent = 'Iniciando...';
+
+                try {
+                    const { task_id } = await api.crmProcess(state.crmFilepath, state.crmSelectedColumns);
+
+                    const pollInterval = setInterval(async () => {
+                        try {
+                            const progressData = await api.checkProgress(task_id);
+                            if (progressData.status === 'processing') {
+                                elements.crmProgress.style.width = `${progressData.progress}%`;
+                                elements.crmProgress.textContent = `${progressData.progress}%`;
+                                elements.crmProgressText.textContent = `Procesando... (${progressData.progress}%)`;
+                            } else if (progressData.status === 'complete') {
+                                clearInterval(pollInterval);
+                                elements.crmProgress.style.width = '100%';
+                                elements.crmProgress.textContent = '100%';
+                                elements.crmProgressText.textContent = '¡Completado!';
+
+                                // Update final stats
+                                if (progressData.stats) {
+                                    elements.crmFinalUnique.textContent = progressData.stats.total_unique.toLocaleString('es-AR');
+                                    elements.crmFinalDuplicates.textContent = progressData.stats.duplicates.toLocaleString('es-AR');
+                                    elements.crmFinalInvalid.textContent = progressData.stats.invalid.toLocaleString('es-AR');
+                                }
+
+                                elements.crmDownloadLink.href = progressData.result;
+
+                                // Mostrar botón de inválidos si hay
+                                if (progressData.invalid_result) {
+                                    elements.crmDownloadInvalidLink.href = progressData.invalid_result;
+                                    elements.crmDownloadInvalidLink.classList.remove('hidden');
+                                } else {
+                                    elements.crmDownloadInvalidLink.classList.add('hidden');
+                                }
+
+                                elements.crmProgressSection.classList.add('hidden');
+                                elements.crmDownloadSection.classList.remove('hidden');
+                                ui.showModal('¡Emails consolidados con éxito!', 'success');
+                                ui.resetLoading(elements.crmProcessBtn);
+                            } else if (progressData.status === 'error') {
+                                clearInterval(pollInterval);
+                                throw new Error(progressData.error);
+                            }
+                        } catch (pollError) {
+                            clearInterval(pollInterval);
+                            throw pollError;
+                        }
+                    }, 2000);
+                } catch (error) {
+                    elements.crmProgressSection.classList.add('hidden');
+                    elements.crmPreviewSection.classList.remove('hidden');
+                    ui.showModal(error.message, 'error');
+                    ui.resetLoading(elements.crmProcessBtn);
+                }
+            },
+
+            handleCrmReset() {
+                const { elements, state } = App;
+
+                // Reset form
+                elements.crmUploadForm.reset();
+                elements.crmUploadForm.classList.remove('hidden');
+
+                // Reset file name
+                elements.crmFileNameDisplay.textContent = '';
+                elements.crmUploadBtn.disabled = true;
+
+                // Hide all sections
+                elements.crmColumnsSection.classList.add('hidden');
+                elements.crmPreviewSection.classList.add('hidden');
+                elements.crmProgressSection.classList.add('hidden');
+                elements.crmDownloadSection.classList.add('hidden');
+                elements.crmNotificationArea.classList.add('hidden');
+
+                // Reset state
+                state.crmFile = null;
+                state.crmFilepath = '';
+                state.crmSelectedColumns = [];
+                state.crmSuggestedColumns = [];
+
+                App.ui.showModal('Formulario CRM reseteado.', 'info');
             },
         },
 

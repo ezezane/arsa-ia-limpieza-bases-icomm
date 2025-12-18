@@ -526,6 +526,277 @@ def multi_export_process_request():
     return jsonify({'task_id': task_id})
 
 
+# --- Funciones Auxiliares CRM ---
+
+def detect_email_columns(columns):
+    """Detecta columnas que probablemente contengan emails por su nombre."""
+    patterns = ['mail', 'email', 'correo', 'e-mail', 'e_mail']
+    suggested = []
+    for col in columns:
+        col_lower = col.lower()
+        for pattern in patterns:
+            if pattern in col_lower:
+                suggested.append(col)
+                break
+    return suggested
+
+def split_emails_by_separators(value):
+    """
+    Separa emails que están juntos en una celda.
+    Separadores: ; , / | espacio, y guión con espacios ( - )
+    """
+    if not isinstance(value, str) or not value.strip():
+        return []
+    
+    import re
+    # Primero reemplazamos el guión con espacios por un delimitador único
+    value = re.sub(r'\s+-\s+', '|||SEPARATOR|||', value)
+    
+    # Ahora separamos por los otros delimitadores
+    # Usamos regex para dividir por ; , / | o espacios múltiples
+    parts = re.split(r'[;,/|\s]+', value.replace('|||SEPARATOR|||', ';'))
+    
+    # Limpiamos y filtramos partes vacías
+    emails = [part.strip() for part in parts if part.strip()]
+    return emails
+
+def is_potential_email(value):
+    """Verifica si un valor podría ser un email (contiene @)."""
+    return isinstance(value, str) and '@' in value
+
+def crm_process_emails_from_df(df, selected_columns):
+    """
+    Procesa un DataFrame extrayendo emails de las columnas seleccionadas.
+    Retorna: (lista de emails únicos, estadísticas)
+    """
+    all_emails = []
+    stats = {
+        'total_raw': 0,
+        'invalid': 0,
+        'separated': 0,
+        'duplicates': 0
+    }
+    
+    for col in selected_columns:
+        if col in df.columns:
+            for value in df[col]:
+                if pd.isna(value):
+                    continue
+                    
+                emails_in_cell = split_emails_by_separators(str(value))
+                
+                if len(emails_in_cell) > 1:
+                    stats['separated'] += len(emails_in_cell) - 1
+                
+                for email in emails_in_cell:
+                    stats['total_raw'] += 1
+                    email = email.strip().lower()
+                    
+                    if is_potential_email(email):
+                        all_emails.append(email)
+                    else:
+                        stats['invalid'] += 1
+    
+    # Eliminar duplicados
+    unique_emails = list(dict.fromkeys(all_emails))
+    stats['duplicates'] = len(all_emails) - len(unique_emails)
+    stats['total_unique'] = len(unique_emails)
+    
+    return unique_emails, stats
+
+
+# --- Rutas CRM ---
+
+@app.route('/api/crm-get-columns', methods=['POST'])
+def crm_get_columns():
+    """Recibe un archivo CSV del CRM, detecta columnas y sugiere las de email."""
+    if 'csv_file' not in request.files:
+        return jsonify({"error": "No se ha subido ningún archivo."}), 400
+
+    file = request.files['csv_file']
+
+    if file.filename == '':
+        return jsonify({"error": "No has seleccionado ningún archivo."}), 400
+
+    if not file.filename.endswith('.csv'):
+        return jsonify({"error": "El formato del archivo no es válido. Solo se aceptan archivos .csv."}), 400
+
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+    try:
+        file.save(filepath)
+        
+        encoding = get_csv_encoding(filepath)
+        df_header = pd.read_csv(filepath, nrows=0, encoding=encoding, sep=app.config['CSV_SEPARATOR'])
+        columns = df_header.columns.tolist()
+        
+        suggested_columns = detect_email_columns(columns)
+        
+        return jsonify({
+            "columns": columns,
+            "suggested_columns": suggested_columns,
+            "filepath": filepath
+        })
+
+    except Exception as e:
+        if os.path.exists(filepath):
+            os.remove(filepath)
+        return jsonify({"error": f"Ocurrió un error al procesar el archivo: {str(e)}"}), 500
+
+
+@app.route('/api/crm-preview', methods=['POST'])
+def crm_preview():
+    """Genera una previsualización de los emails procesados con estadísticas."""
+    data = request.get_json()
+    filepath = data.get('filepath')
+    selected_columns = data.get('columns', [])
+
+    if not filepath or not os.path.exists(filepath):
+        return jsonify({"error": "No se pudo encontrar el archivo. Por favor, intentá subir el archivo de nuevo."}), 400
+
+    if not selected_columns:
+        return jsonify({"error": "Debés seleccionar al menos una columna de email."}), 400
+
+    try:
+        encoding = get_csv_encoding(filepath)
+        # Leer solo las primeras 100 filas para preview
+        df_preview = pd.read_csv(filepath, nrows=100, encoding=encoding, sep=app.config['CSV_SEPARATOR'])
+        
+        unique_emails, stats = crm_process_emails_from_df(df_preview, selected_columns)
+        
+        # Tomar solo los primeros 10 para mostrar
+        sample_emails = unique_emails[:10]
+        
+        return jsonify({
+            "preview": sample_emails,
+            "stats": stats
+        })
+
+    except Exception as e:
+        return jsonify({"error": f"Ocurrió un error al generar la previsualización: {str(e)}"}), 500
+
+
+@app.route('/api/crm-process', methods=['POST'])
+def crm_process_request():
+    """Inicia el proceso de consolidación de emails en segundo plano."""
+    data = request.get_json()
+    filepath = data.get('filepath')
+    selected_columns = data.get('columns', [])
+
+    if not filepath or not os.path.exists(filepath):
+        return jsonify({"error": "No se pudo encontrar el archivo. Por favor, intentá subir el archivo de nuevo."}), 400
+
+    if not selected_columns:
+        return jsonify({"error": "Debés seleccionar al menos una columna de email."}), 400
+
+    task_id = str(uuid.uuid4())
+    original_filename = os.path.basename(filepath)
+    new_filename = f"{os.path.splitext(original_filename)[0]}_emails_limpios.csv"
+    output_path = os.path.join(app.config['DOWNLOAD_FOLDER'], new_filename)
+
+    tasks[task_id] = {'status': 'processing', 'progress': 0}
+
+    thread = threading.Thread(target=crm_process_task, args=(task_id, filepath, selected_columns, output_path))
+    thread.start()
+
+    return jsonify({'task_id': task_id})
+
+
+def crm_process_task(task_id, filepath, selected_columns, output_path):
+    """Tarea en segundo plano para procesar emails del CRM."""
+    try:
+        # Detectar encoding primero
+        encoding = get_csv_encoding(filepath)
+        
+        # Contar total de filas para progreso (con manejo de errores de encoding)
+        try:
+            total_rows = sum(1 for _ in open(filepath, 'r', encoding='latin-1', errors='replace')) - 1
+        except:
+            total_rows = 1000  # Valor por defecto si falla el conteo
+        
+        if total_rows <= 0:
+            total_rows = 1
+        
+        all_emails = []
+        invalid_entries = []  # Lista para guardar registros inválidos
+        stats = {
+            'total_raw': 0,
+            'invalid': 0,
+            'separated': 0,
+            'duplicates': 0
+        }
+        
+        chunk_size = app.config['CHUNK_SIZE']
+        rows_processed = 0
+        
+        # Intentar leer primero con encoding detectado, si falla usar latin-1
+        def read_chunks():
+            try:
+                for chunk in pd.read_csv(filepath, chunksize=chunk_size, encoding=encoding, sep=app.config['CSV_SEPARATOR']):
+                    yield chunk
+            except UnicodeDecodeError:
+                for chunk in pd.read_csv(filepath, chunksize=chunk_size, encoding='latin-1', sep=app.config['CSV_SEPARATOR']):
+                    yield chunk
+        
+        for chunk in read_chunks():
+            for col in selected_columns:
+                if col in chunk.columns:
+                    for value in chunk[col]:
+                        if pd.isna(value):
+                            continue
+                            
+                        emails_in_cell = split_emails_by_separators(str(value))
+                        
+                        if len(emails_in_cell) > 1:
+                            stats['separated'] += len(emails_in_cell) - 1
+                        
+                        for email in emails_in_cell:
+                            stats['total_raw'] += 1
+                            email_clean = email.strip().lower()
+                            
+                            if is_potential_email(email_clean):
+                                all_emails.append(email_clean)
+                            else:
+                                stats['invalid'] += 1
+                                if email.strip():  # Solo guardar si no está vacío
+                                    invalid_entries.append(email.strip())
+            
+            rows_processed += len(chunk)
+            progress = (rows_processed / total_rows) * 100
+            tasks[task_id]['progress'] = round(min(progress, 100))
+        
+        # Eliminar duplicados preservando orden
+        unique_emails = list(dict.fromkeys(all_emails))
+        unique_invalid = list(dict.fromkeys(invalid_entries))
+        stats['duplicates'] = len(all_emails) - len(unique_emails)
+        stats['total_unique'] = len(unique_emails)
+        
+        # Guardar CSV de emails válidos
+        df_output = pd.DataFrame(unique_emails, columns=['email'])
+        df_output.to_csv(output_path, index=False)
+        
+        # Guardar CSV de registros inválidos (si hay)
+        invalid_result = None
+        if unique_invalid:
+            invalid_filename = f"{os.path.splitext(os.path.basename(filepath))[0]}_invalidos.csv"
+            invalid_path = os.path.join(app.config['DOWNLOAD_FOLDER'], invalid_filename)
+            df_invalid = pd.DataFrame(unique_invalid, columns=['registro_invalido'])
+            df_invalid.to_csv(invalid_path, index=False)
+            invalid_result = f'/downloads/{invalid_filename}'
+        
+        tasks[task_id]['status'] = 'complete'
+        tasks[task_id]['result'] = f'/downloads/{os.path.basename(output_path)}'
+        tasks[task_id]['invalid_result'] = invalid_result
+        tasks[task_id]['stats'] = stats
+        tasks[task_id]['processed_rows'] = len(unique_emails)
+
+    except FileNotFoundError:
+        tasks[task_id]['status'] = 'error'
+        tasks[task_id]['error'] = "El archivo original fue eliminado o movido durante el procesamiento."
+    except Exception as e:
+        tasks[task_id]['status'] = 'error'
+        tasks[task_id]['error'] = f"Ocurrió un error inesperado: {str(e)}"
+
+
 # --- Bloque Principal ---
 
 if __name__ == '__main__':

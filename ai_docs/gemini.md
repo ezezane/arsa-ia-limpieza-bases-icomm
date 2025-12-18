@@ -135,3 +135,138 @@ Crear una nueva funcionalidad que permita al usuario subir una base de datos y g
     -   `config/tarjetas_conocidas.txt`
     -   `config/arplus_cobrand.txt`
     -   `config/arplus_partners.txt`
+
+
+# PROMPT para pestaña CRM
+
+necesito agregar una nueva funcionalidad al desarrollo que ya tenemos.
+
+necesito sumar una nueva pestaña que se llame CRM.
+
+en esta pestaña trabajaremos las bases que nos comparte el equipo de CRM, que vienen muy desordenadas, y para el tipo de trabajo que hacemos con esas bases, las necesitamos más simplificadas.
+
+normalmente nos comparten una base con varias columnas, de las cuales las últimas sulen ser 3 de email, te dejo un ejemplo en la carpeta @modelo base crm.csv con datos simulados por privacidad.
+
+de todos los datos que me llegan solo necesito los que dicen email, en este caso: MAIL, MAIL2, Ar_Email.
+
+como estos los tengo que subir a una plataforma de email marketing, necesito:
+* un correo por línea
+* eliminar duplicados
+* limpiar datos sucios en el correo si hay
+
+también tengo casos que, dentro de una celda tengo 2 mails juntos separados por punto y coma, guiones, barras (/), etc, en ese caso necesito que si son mails distintos se guarde uno por línea.
+
+te cuento como lo hago yo manualmente para ver si te sirve mi proceso...
+
+primero abro el archivo en excel, selecciono todas las columnas que NO son email y las elimino, luego lo que hago es copiar todo el contenido de la segunda columna y lo pego al final de la primera, y lo mismo con la tercera columna, pero todo el contenido al final de la primera columna, quedando todo junto en uno solo.
+
+luego ordeno alfabéticamente por email, y me quito los duplicados.
+
+luego en excel selecciono separar por punto y coma, los nuevos correos los agrego nuevamente al final todas las veces que sea necesario, hasta que queden todos los correos separados por línea, vuelvo a ordenar y elimino duplicados nuevamente.
+
+esto lo repito todas las veces que sea necesario según la cantidad de columnas que tenga el archivo y los tipos de separadores (coma, punto y coma, guiones, barras, etc).
+
+esto lo hago manualmente, y me toma bastante tiempo, por eso necesito que me ayudes a automatizarlo.
+
+---
+
+## 🤖 Análisis y Consultas - Gemini (18/12/2025)
+
+### ✅ Entendí correctamente
+
+1. **Nueva pestaña "CRM"** en la interfaz existente
+2. **Objetivo**: Consolidar múltiples columnas de email en una sola lista limpia
+3. **Proceso automatizado**:
+   - Detectar columnas que contengan emails (MAIL, MAIL2, Ar_Email, etc.)
+   - Unificar todos los emails en una sola columna
+   - Separar emails que estén juntos en una celda (separadores: `;`, `-`, `/`, `,`, etc.)
+   - Eliminar duplicados
+   - Limpiar datos sucios
+   - Resultado: un CSV con una sola columna `email`, un correo por línea
+
+### ❓ Consultas antes de desarrollar
+
+Por favor respondé debajo de cada pregunta para que quede documentado:
+
+#### 1. Detección automática vs. selección manual de columnas
+¿Preferís que el sistema detecte automáticamente las columnas de email (buscando patrones como "mail", "email", "correo" en el nombre), o que te muestre todas las columnas y vos selecciones cuáles son las de email?
+
+**Tu respuesta:** 
+Me gustaría que el sistema detecte automáticamente las columnas de email, pero que sea una sugerencia, que me muestre todas las columnas y que yo pueda seleccionar las que considero que son de email.
+
+---
+
+#### 2. Validación de formato de email
+¿Querés que el sistema valide que cada email tenga un formato válido (ejemplo: `algo@dominio.com`) y descarte los que no cumplan? ¿O preferís conservar todo y revisar después?
+
+**Tu respuesta:** 
+Prefiero que conservemos todo, y que de última instancia el rechazo lo haga el proveedor de la plataforma de email marketing.
+Sí lo vamos a contar en las estadísticas de registros inválidos.
+
+---
+
+#### 3. Separadores de emails en una celda
+Mencionaste punto y coma, guiones, barras. ¿Hay algún otro separador que uses frecuentemente? Te listo los que voy a implementar:
+- Punto y coma (`;`)
+- Coma (`,`)
+- Barra (`/`)
+- Guión (`-`)
+- Pipe (`|`)
+- Espacio (` `)
+
+¿Falta alguno? ¿Sobra alguno (ejemplo: el guión podría ser problemático porque hay emails con guiones válidos como `juan-perez@email.com`)?
+
+**Tu respuesta:** 
+Esas opciones está bien. El tema del guión, es solo válido si está entre espacios, ej: "test@test.com - test2@test.com".
+
+---
+
+#### 4. Manejo de celdas vacías o con datos inválidos
+Si una celda tiene texto pero no es un email válido (ejemplo: "NO TIENE", "N/A", "-", etc.), ¿qué hacemos?
+- **Opción A:** Descartarlo automáticamente
+- **Opción B:** Mostrarlo en una lista aparte de "registros inválidos" para que revises
+
+**Tu respuesta:** 
+Es similar a la pregunta 2. Si no tiene @, se elimina el registro. Sí lo contamos en las estadísticas de registros inválidos.
+
+---
+
+#### 5. Previsualización
+¿Querés ver una previsualización antes de procesar (como en las otras pestañas), mostrando:
+- Cantidad de emails únicos encontrados
+- Cantidad de duplicados eliminados
+- Cantidad de emails separados de celdas múltiples
+- Primeros 10 emails como muestra
+
+**Tu respuesta:** 
+Sí, me gustaría ver una previsualización antes de procesar de 10 ejemplos, y las estadísticas al final.
+---
+
+#### 6. Nombre del archivo de salida
+¿Qué formato preferís para el archivo de salida?
+- **Opción A:** `[nombre_original]_emails_limpios.csv`
+- **Opción B:** `crm_emails_[fecha].csv`
+- **Opción C:** Otro (especificá)
+
+**Tu respuesta:** 
+opción A, formato csv siempre.
+---
+
+### 💡 Propuesta técnica inicial
+
+Una vez que me confirmes las respuestas, el desarrollo incluiría:
+
+1. **Nueva pestaña en `index.html`** con diseño consistente con las existentes
+2. **Nueva ruta en `app.py`**: `/api/crm-process`
+3. **Lógica de procesamiento**:
+   - Leer CSV con pandas
+   - Identificar columnas de email
+   - Unificar todas las columnas en una serie
+   - Aplicar split por múltiples separadores
+   - Limpiar espacios, convertir a minúsculas (opcional)
+   - Eliminar duplicados y ordenar
+   - Exportar CSV final
+4. **Frontend en `script.js`** con barra de progreso y descarga
+
+### ⏳ Tiempo estimado de desarrollo
+Aproximadamente 2-3 horas una vez aprobado el diseño.

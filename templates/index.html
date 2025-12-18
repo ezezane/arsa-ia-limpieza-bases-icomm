@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,6 +9,7 @@
     <link rel="apple-touch-icon" href="/static/img/base-de-datos.png">
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
+
 <body>
     <div class="container">
         <h1>ARSA IA - Limpieza de Bases</h1>
@@ -15,84 +17,93 @@
         <div class="tabs">
             <button class="tab-link active" data-tab="limpieza-tab">Limpieza de Base</button>
             <button class="tab-link" data-tab="multi-export-tab">Exportación Múltiple</button>
+            <button class="tab-link" data-tab="crm-tab">CRM</button>
         </div>
 
         <div id="limpieza-tab" class="tab-content active">
-            <p>Sube tu archivo .csv para limpiar y normalizar la base de datos. La IA se encargará de procesar y limpiar los datos por ti.</p>
+            <p>Sube tu archivo .csv para limpiar y normalizar la base de datos. La IA se encargará de procesar y limpiar
+                los datos por ti.</p>
 
             <form id="upload-form" class="form-group">
                 <div class="form-group">
-                <label for="csv-file" class="file-upload-label">
-                    <img src="{{ url_for('static', filename='img/base-de-datos.png') }}" alt="Icono de base de datos" width="50">
-                    <p id="upload-instruction-text">Arrastra y suelta tu archivo .csv o haz clic aquí</p>
-                    <p id="file-name"></p>
-                </label>
-                <input type="file" id="csv-file" accept=".csv">
+                    <label for="csv-file" class="file-upload-label">
+                        <img src="{{ url_for('static', filename='img/base-de-datos.png') }}"
+                            alt="Icono de base de datos" width="50">
+                        <p id="upload-instruction-text">Arrastra y suelta tu archivo .csv o haz clic aquí</p>
+                        <p id="file-name"></p>
+                    </label>
+                    <input type="file" id="csv-file" accept=".csv">
                 </div>
 
-            <div id="notification-area" class="notification hidden"></div>
+                <div id="notification-area" class="notification hidden"></div>
 
-            <!-- Sección para mostrar y seleccionar columnas -->
-            <div id="columns-section" class="hidden">
-                <h2>Columnas a limpiar</h2>
-                <input type="search" id="search-columns" class="form-control" placeholder="Buscar columnas...">
-                <button type="button" id="toggle-select-btn" class="btn btn-secondary">Seleccionar Todos</button>
-                
-                <div class="preset-section">
-                    <h3>Presets</h3>
-                    <button type="button" id="arplus-cumple-preset-btn" class="btn btn-preset">ARPLUS Cumple</button>
+                <!-- Sección para mostrar y seleccionar columnas -->
+                <div id="columns-section" class="hidden">
+                    <h2>Columnas a limpiar</h2>
+                    <input type="search" id="search-columns" class="form-control" placeholder="Buscar columnas...">
+                    <button type="button" id="toggle-select-btn" class="btn btn-secondary">Seleccionar Todos</button>
+
+                    <div class="preset-section">
+                        <h3>Presets</h3>
+                        <button type="button" id="arplus-cumple-preset-btn" class="btn btn-preset">ARPLUS
+                            Cumple</button>
+                    </div>
+
+                    <div id="columns-list"></div>
+                    <button type="button" id="preview-btn" class="btn">Previsualizar</button>
                 </div>
 
-                <div id="columns-list"></div>
-                <button type="button" id="preview-btn" class="btn">Previsualizar</button>
-            </div>
-
-            <!-- Sección para reordenar columnas (nueva) -->
-            <div id="reorder-section" class="hidden">
-                <h2>Reordenar Columnas Seleccionadas</h2>
-                <p>Arrastra y suelta las columnas para establecer el orden deseado en el archivo final.</p>
-                <div id="reorder-columns-list" class="columns-list-reorder"></div>
-                <button type="button" id="confirm-reorder-btn" class="btn">Confirmar Orden y Previsualizar</button>
-                <button type="button" id="back-to-selection-btn" class="btn btn-secondary">Volver a Selección</button>
-            </div>
-
-            <!-- Sección de Previsualización -->
-            <div id="preview-section" class="hidden">
-                <h2>Previsualización de Datos</h2>
-                <p>Así se verán las primeras 10 filas de tu archivo limpio. Si estás de acuerdo, puedes continuar.</p>
-                <div id="preview-table-container"></div>
-                <button type="button" id="process-btn" class="btn">Limpiar Base</button>
-                <button type="button" id="back-to-columns-btn" class="btn btn-secondary">Volver a Seleccionar</button>
-            </div>
-
-            <!-- Sección de progreso -->
-            <div id="progress-section" class="hidden">
-                <h2>Limpiando base...</h2>
-                <p id="progress-text">Iniciando...</p>
-                <div class="progress-bar">
-                    <div id="progress" class="progress"></div>
+                <!-- Sección para reordenar columnas (nueva) -->
+                <div id="reorder-section" class="hidden">
+                    <h2>Reordenar Columnas Seleccionadas</h2>
+                    <p>Arrastra y suelta las columnas para establecer el orden deseado en el archivo final.</p>
+                    <div id="reorder-columns-list" class="columns-list-reorder"></div>
+                    <button type="button" id="confirm-reorder-btn" class="btn">Confirmar Orden y Previsualizar</button>
+                    <button type="button" id="back-to-selection-btn" class="btn btn-secondary">Volver a
+                        Selección</button>
                 </div>
-            </div>
 
-            <!-- Sección de descarga -->
-            <div id="download-section" class="hidden">
-                <h2>¡Base Limpia!</h2>
-                <p>Tu base de datos ha sido limpiada y normalizada con éxito.</p>
-                <p id="processed-count"></p>
-                <a href="#" id="download-link" class="btn">Descargar Base Limpia</a>
-                <button type="button" id="reset-btn" class="btn btn-danger">Empezar de Nuevo</button>
-            </div>
-        </form>
+                <!-- Sección de Previsualización -->
+                <div id="preview-section" class="hidden">
+                    <h2>Previsualización de Datos</h2>
+                    <p>Así se verán las primeras 10 filas de tu archivo limpio. Si estás de acuerdo, puedes continuar.
+                    </p>
+                    <div id="preview-table-container"></div>
+                    <button type="button" id="process-btn" class="btn">Limpiar Base</button>
+                    <button type="button" id="back-to-columns-btn" class="btn btn-secondary">Volver a
+                        Seleccionar</button>
+                </div>
+
+                <!-- Sección de progreso -->
+                <div id="progress-section" class="hidden">
+                    <h2>Limpiando base...</h2>
+                    <p id="progress-text">Iniciando...</p>
+                    <div class="progress-bar">
+                        <div id="progress" class="progress"></div>
+                    </div>
+                </div>
+
+                <!-- Sección de descarga -->
+                <div id="download-section" class="hidden">
+                    <h2>¡Base Limpia!</h2>
+                    <p>Tu base de datos ha sido limpiada y normalizada con éxito.</p>
+                    <p id="processed-count"></p>
+                    <a href="#" id="download-link" class="btn">Descargar Base Limpia</a>
+                    <button type="button" id="reset-btn" class="btn btn-danger">Empezar de Nuevo</button>
+                </div>
+            </form>
         </div>
 
         <div id="multi-export-tab" class="tab-content">
             <div id="multi-export-container">
-                <p>Sube tu base de datos para generar automáticamente un archivo CSV por cada banco, tarjeta, cobrand o partner para tus campañas de Ads.</p>
+                <p>Sube tu base de datos para generar automáticamente un archivo CSV por cada banco, tarjeta, cobrand o
+                    partner para tus campañas de Ads.</p>
 
                 <form id="multi-upload-form" class="form-group">
                     <div class="form-group">
                         <label for="multi-csv-file" class="file-upload-label" id="multi-file-upload-label">
-                            <img src="{{ url_for('static', filename='img/base-de-datos.png') }}" alt="Icono de base de datos" width="50">
+                            <img src="{{ url_for('static', filename='img/base-de-datos.png') }}"
+                                alt="Icono de base de datos" width="50">
                             <p id="multi-upload-instruction-text">Arrastra y suelta tu archivo .csv o haz clic aquí</p>
                             <p id="multi-file-name"></p>
                         </label>
@@ -103,12 +114,16 @@
 
                 <div id="multi-upload-progress-section" class="hidden">
                     <p id="multi-upload-progress-text">Subiendo archivo...</p>
-                    <div class="progress-bar"><div id="multi-upload-progress" class="progress"></div></div>
+                    <div class="progress-bar">
+                        <div id="multi-upload-progress" class="progress"></div>
+                    </div>
                 </div>
 
                 <div id="multi-initial-processing-progress-section" class="hidden">
                     <p id="multi-initial-processing-progress-text">Procesando archivo...</p>
-                    <div class="progress-bar"><div id="multi-initial-processing-progress" class="progress"></div></div>
+                    <div class="progress-bar">
+                        <div id="multi-initial-processing-progress" class="progress"></div>
+                    </div>
                 </div>
                 <div id="multi-notification-area" class="notification hidden"></div>
 
@@ -122,7 +137,9 @@
                 <div id="multi-processing-progress-section" class="hidden">
                     <h2>Procesando y generando archivos...</h2>
                     <p id="multi-processing-progress-text">Iniciando...</p>
-                    <div class="progress-bar"><div id="multi-processing-progress" class="progress"></div></div>
+                    <div class="progress-bar">
+                        <div id="multi-processing-progress" class="progress"></div>
+                    </div>
                 </div>
 
                 <!-- Sección de descarga -->
@@ -130,6 +147,109 @@
                     <h2>¡Archivos Generados!</h2>
                     <p>Tus archivos de segmento han sido generados y comprimidos con éxito.</p>
                     <a href="#" id="multi-download-link" class="btn">Descargar Archivos (.zip)</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pestaña CRM -->
+        <div id="crm-tab" class="tab-content">
+            <div id="crm-container">
+                <p>Sube la base de datos del CRM para consolidar todas las columnas de email en una sola lista limpia,
+                    sin duplicados.</p>
+
+                <!-- Sección de subida de archivo -->
+                <form id="crm-upload-form" class="form-group">
+                    <div class="form-group">
+                        <label for="crm-csv-file" class="file-upload-label" id="crm-file-upload-label">
+                            <img src="{{ url_for('static', filename='img/base-de-datos.png') }}"
+                                alt="Icono de base de datos" width="50">
+                            <p id="crm-upload-instruction-text">Arrastra y suelta tu archivo .csv o haz clic aquí</p>
+                            <p id="crm-file-name"></p>
+                        </label>
+                        <input type="file" id="crm-csv-file" accept=".csv">
+                    </div>
+                    <button type="button" id="crm-upload-btn" class="btn" disabled>Subir Archivo</button>
+                </form>
+
+                <div id="crm-notification-area" class="notification hidden"></div>
+
+                <!-- Sección de selección de columnas -->
+                <div id="crm-columns-section" class="hidden">
+                    <h2>Selecciona las columnas de email</h2>
+                    <p>Las columnas resaltadas con <span class="badge-suggested">sugerido</span> fueron detectadas
+                        automáticamente. Podés modificar la selección.</p>
+                    <div id="crm-columns-list"></div>
+                    <button type="button" id="crm-preview-btn" class="btn" disabled>Previsualizar</button>
+                    <button type="button" id="crm-back-to-upload-btn" class="btn btn-secondary">Elegir otro
+                        archivo</button>
+                </div>
+
+                <!-- Sección de previsualización -->
+                <div id="crm-preview-section" class="hidden">
+                    <h2>Previsualización</h2>
+                    <p>Así se verán algunos de los emails consolidados. Las estadísticas se calculan sobre las primeras
+                        100 filas.</p>
+
+                    <div id="crm-stats-container" class="stats-container">
+                        <div class="stat-box">
+                            <span class="stat-value" id="crm-stat-total">0</span>
+                            <span class="stat-label">Emails procesados</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-value" id="crm-stat-unique">0</span>
+                            <span class="stat-label">Emails únicos</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-value" id="crm-stat-duplicates">0</span>
+                            <span class="stat-label">Duplicados eliminados</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-value" id="crm-stat-invalid">0</span>
+                            <span class="stat-label">Registros inválidos</span>
+                        </div>
+                    </div>
+
+                    <h3>Muestra de emails (primeros 10)</h3>
+                    <ul id="crm-preview-list" class="email-preview-list"></ul>
+
+                    <button type="button" id="crm-process-btn" class="btn">Procesar Archivo Completo</button>
+                    <button type="button" id="crm-back-to-columns-btn" class="btn btn-secondary">Volver a
+                        Selección</button>
+                </div>
+
+                <!-- Sección de progreso -->
+                <div id="crm-progress-section" class="hidden">
+                    <h2>Procesando emails...</h2>
+                    <p id="crm-progress-text">Iniciando...</p>
+                    <div class="progress-bar">
+                        <div id="crm-progress" class="progress"></div>
+                    </div>
+                </div>
+
+                <!-- Sección de descarga -->
+                <div id="crm-download-section" class="hidden">
+                    <h2>¡Emails Consolidados!</h2>
+                    <p>Tu lista de emails ha sido procesada con éxito.</p>
+
+                    <div id="crm-final-stats" class="stats-container">
+                        <div class="stat-box stat-success">
+                            <span class="stat-value" id="crm-final-unique">0</span>
+                            <span class="stat-label">Emails únicos</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-value" id="crm-final-duplicates">0</span>
+                            <span class="stat-label">Duplicados eliminados</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-value" id="crm-final-invalid">0</span>
+                            <span class="stat-label">Registros inválidos</span>
+                        </div>
+                    </div>
+
+                    <a href="#" id="crm-download-link" class="btn">Descargar Emails (.csv)</a>
+                    <a href="#" id="crm-download-invalid-link" class="btn btn-secondary hidden">Descargar Inválidos
+                        (.csv)</a>
+                    <button type="button" id="crm-reset-btn" class="btn btn-danger">Empezar de Nuevo</button>
                 </div>
             </div>
         </div>
@@ -145,4 +265,5 @@
         </div>
     </div>
 </body>
+
 </html>

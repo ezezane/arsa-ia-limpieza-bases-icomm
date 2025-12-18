@@ -1,0 +1,4 @@
+PNR;TKT;FECHA;VUELO;ORIGEN;DESTINO;CLASE;CABINA;farebasis;Itinerario del tkt;tkt_red;red;APELLIDO;NOMNRE;GENERO;EDAD;POS;tkt_pos;Modalidad Emision;IATA;CANAL;DOCS;FONO1;FONO2;MAIL;MAIL2;Ar_Email
+AAAAAA;1111111111;18/12/2025;1111;xxx;xxx;H;ECONOMICA;H;XXXXXX;C;Cabotaje;apellido 1;nombre 1;F;51;AR;NFALK;WEB;1;WEB RED LINK;;;;test@test.com;test2@test.com;test3@test.com
+AAAAAA;1111111111;18/12/2025;1111;xxx;xxx;H;ECONOMICA;H;XXXXXX;C;Cabotaje;apellido 2;nombre 2;;50;AR;NFALK;WEB;1;WEB RED LINK;;;;test@test.com;test2@test.com;test3@test.com
+AAAAAA;1111111111;18/12/2025;1111;xxx;xxx;H;ECONOMICA;H;XXXXXX;C;Cabotaje;apellido 3;nombre 3;M;MENOR;AR;NFALK;WEB;1;WEB RED LINK;;;;test@test.com;test2@test.com;test3@test.com
